@@ -18,5 +18,6 @@
     "framework",
     "node",
     "tasks"
-  ]
+  ],
+   "license": "MPL-2.0"
 }
