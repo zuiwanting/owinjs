@@ -1,0 +1,22 @@
+{
+    "name": "owinjs",
+    "description": "Owin/JS extremeley lightweight middleware framework for Node.js, with Promise/A based async tasks.   Replacement for Connect, Express, and Koa, with adapters to call middleware written for latter frameworks.  Conforms to the OWIN specification for .NET servers.",
+    "author": "OwinJS",
+    "version": "1.0.0",
+    "repository": "https://github.com/OwinJS/OwinJS",
+    "dependencies": {
+        "promise" : "*"
+    },"keywords": [
+    "owinjs",
+    "middleware",
+    "router",
+    "route",
+    "http",
+    "connect",
+    "promise",
+    "async",
+    "framework",
+    "node",
+    "tasks"
+  ]
+}
