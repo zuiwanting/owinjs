@@ -4,7 +4,7 @@
     "author": "OwinJS",
     "version": "1.0.0",
     "repository": "https://github.com/OwinJS/OwinJS",
-    "dependencies": {
+    "peerDependencies": {
         "promise" : "*"
     },"keywords": [
     "owinjs",
