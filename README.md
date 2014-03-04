@@ -146,4 +146,4 @@ http.createServer(owin.http(app.build())).listen();
 
 ## API Reference Specification
  
-[`OwinJS/owinjs-spec`](https://github.com/OwinJS/owinjs-spec)
+[`OwinJS/owinjs-spec`](https://github.com/OwinJS/OwinJS-Spec/blob/master/Specification.md)
