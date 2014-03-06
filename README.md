@@ -15,7 +15,7 @@ See all the other repositories in the OwinJS organization space for reference se
 
 ## Summary
 
-An Owin/JS middleware/application is simply a `function(next)` that provides a single web-server owin context for each request, where it is easy to access all the http parameters  (`this.Request.Path`, `this.Response.Body` etc.).  "Tasks" (promises) are returned for full async programming without callbacks nor use of limited ES6 features.
+An Owin/JS middleware/application is simply a `function(next)` that provides a single web-server owin context for each request, where it is easy to access all the http parameters  (`this.request.path`, `this.response.body` etc.).  "Tasks" (promises) are returned for full async programming without callbacks nor use of limited ES6 features.
 
 Middleware can be chained with `app.use(middleware1).use(middleware2)` etc.
 
@@ -87,8 +87,8 @@ var owin = require('owinjs');
 var browser = require('browser'); 
 var app = new owin.app();
 app.use(function(next){
-    this.Response.writeHead(200, {'Content-Type': 'text/html'});
-    this.Response.end("<html><head></head><body>Hello World</body>");
+    this.response.writeHead(200, {'Content-Type': 'text/html'});
+    this.response.end("<html><head></head><body>Hello World</body>");
     return next();
     });
 browser.createOwinServer(app.build()).listen();
@@ -100,8 +100,8 @@ var owin = require('owinjs');
 var browser = require('browser'); 
 var app = new owin.app();
 app.use(function(next, callback){
-    this.Response.writeHead(200, {'Content-Type': 'text/html'});
-    this.Response.end("<html><head></head><body>Hello World</body>");
+    this.response.writeHead(200, {'Content-Type': 'text/html'});
+    this.response.end("<html><head></head><body>Hello World</body>");
     next(this, function(err, result){callback(err,result)});
     });
 browser.createOwinServer(app.build()).listen();
@@ -125,8 +125,8 @@ var owin = require('owinjs');
 var http = require('http');
 var app = new owin.app();
 app.use(function(next){
-    this.Response.writeHead(200, {'Content-Type': 'text/html'});
-    this.Response.end("<html><head></head><body>Hello World</body>");
+    this.response.writeHead(200, {'Content-Type': 'text/html'});
+    this.response.end("<html><head></head><body>Hello World</body>");
 return next();
 });
 http.createServer(owin.http(app.build())).listen();
