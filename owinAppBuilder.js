@@ -16,7 +16,7 @@ var Promise = require('promise');
 var OwinHttp = require('./owinHttp.js');
 var OwinContext = require('./owinContext');
 
-appBuilder = function () {
+appBuilder = function() {
     this.properties = {};
     this.middleware = [];
 }
@@ -31,17 +31,17 @@ app.use = function(middleware){
 };
 
 app.buildNodeFunc = function(){
-    var mw = [respond].concat(this.middleware).concat(defaultApp);
+    var mw = [owinRespond].concat(this.middleware).concat(owinDefaultApp);
     var fn = compose(mw);
     var self = this;
     
-    return function(owin, callback){
+    return function owinPipelineBuilder(owin, callback){
         OwinContext.expandContext(owin);
         
         owin.app = self;
         try {
         fn.call(owin, null,
-                function(err, result){
+                function owinPipelineDone(err, result){
                 if (!err) {
                 callback(null);}
                 else {   errorRespond(owin,err);  callback(null);}
@@ -55,16 +55,16 @@ app.buildNodeFunc = function(){
 };
 
 app.build = function(){
-    var mw = [respondAsync].concat(this.middleware).concat(defaultAppAsync);
+    var mw = [owinRespondAsync].concat(this.middleware).concat(owinDefaultAppAsync);
     var fn = composeAsync(mw);
     var self = this;
     
-    return function(owin, callback){
+    return function owinPipelineBuilder(owin, callback){
         OwinContext.expandContext(owin);
         
         owin.app = self;
         try {
-            return fn(owin).then(function(){
+            return fn(owin).then(function owinPipelineDone(){
                                  callback(null)},function(err){ errorRespond(owin,err);  callback(null);});
         }
         catch (err)
@@ -79,9 +79,9 @@ app.buildAppFunc = app.build;
 app.httpCallback = OwinHttp(app.build());
 
 function compose(middleware){
-    return function (next, callback){
+    return function owinPipeline(next, callback){
         var i = middleware.length;
-        var prev = next || function(callback){ callback(null);};
+        var prev = next || function owinPipelineLast(callback){ callback(null);};
         var curr;
         while (i--) {
             curr = middleware[i];
@@ -92,10 +92,10 @@ function compose(middleware){
 }
 
 function composeAsync(middleware){
-    return function (owin){
+    return function owinPipeline(owin){
         
         var i = middleware.length;
-        var prev = function(){return new Promise(function(resolve,reject){resolve(null);});};
+        var prev = function owinPipelineLast(){return new Promise(function (resolve,reject){resolve(null);});};
         var curr;
         while (i--) {
             curr = middleware[i];
@@ -119,9 +119,9 @@ function errorRespond(owin, err)
     }
 }
 
-function respond(next, callback){
+function owinRespond(next, callback){
     this.response.setHeader('X-Powered-By', 'OWIN-JS');
-    next(function(err, result) {
+    next(function appBuilderOuterMiddlewareCallback(err, result) {
          if (err)
          {
                errorRespond(owin,err);
@@ -131,12 +131,12 @@ function respond(next, callback){
          });
 }
 
-function respondAsync(next){
+function owinRespondAsync(next){
     var owin = this;
     this.response.setHeader('X-Powered-By', 'OWIN-JS');
     return next().then(
-                       function(){},
-                       function(err){
+                       function (){},
+                       function appBuilderOuterMiddlewareError(err){
                        console.log("respondAsync ERROR " + owin.request.scheme + ":\\"+ owin.request.path + "\r" + err);
                        
                        errorRespond(owin,err);  return Promise.from(null);  }
@@ -144,7 +144,7 @@ function respondAsync(next){
 }
 
 
-function defaultApp(next, callback){
+function owinDefaultApp(next, callback){
     if (this.response.statusCode === null)
     {
         console.log("defaultAppAsync HANDLED 404 " + this.request.scheme + ":\\"+ this.request.path );
@@ -157,7 +157,7 @@ function defaultApp(next, callback){
     }
 }
 
-function defaultAppAsync(next){
+function owinDefaultAppAsync(next){
     if (this.response.statusCode === null)
     {
         console.log("defaultAppAsync HANDLED 404 " + this.request.scheme + ":\\"+ this.request.path );
