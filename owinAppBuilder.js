@@ -1,7 +1,7 @@
 /*
  * nodeFunc = (void) function(owin, callback)
  * appFunc = (Promise) function(owin)
- * appletFunc = (Promise) function()   nodeletFunc = (void) function(callback)
+ * appletFunc = (Promise) function(owin)   nodeletFunc = (void) function(owin, callback)
  * app.use = function(middleware)   OR function(middlewareAsync)
  * middleware = (void) function(next, callback)  with this = owin, next=nodeletFunc;
  *         OR = (Promise) function(next) with this = owin, next=appletFunc;
@@ -15,6 +15,7 @@
 var Promise = require('promise');
 var OwinHttp = require('./owinHttp.js');
 var OwinContext = require('./owinContext');
+var OwinMiddleware = require('./owinMiddleware');
 
 appBuilder = function() {
     this.properties = {};
@@ -25,38 +26,14 @@ exports = module.exports = appBuilder;
 
 var app = appBuilder.prototype;
 
-app.use = function(middleware){
-    this.middleware.push(middleware);
-    return this;
-};
-
-app.buildNodeFunc = function(){
-    var mw = [owinRespond].concat(this.middleware).concat(owinDefaultApp);
-    var fn = compose(mw);
-    var self = this;
-    
-    return function owinPipelineBuilder(owin, callback){
-        OwinContext.expandContext(owin);
-        
-        owin.app = self;
-        try {
-        fn.call(owin, null,
-                function owinPipelineDone(err, result){
-                if (!err) {
-                callback(null);}
-                else {   errorRespond(owin,err);  callback(null);}
-                });
-        }
-        catch (err)
-        {
-             errorRespond(owin,err);  callback(null);
-        }
-    }
-};
+app.use = function(mw){
+     this.middleware.push(OwinMiddleware(mw));
+     return this;
+ };
 
 app.build = function(){
-    var mw = [owinRespondAsync].concat(this.middleware).concat(owinDefaultAppAsync);
-    var fn = composeAsync(mw);
+    var mw = [owinRespondMiddleware].concat(this.middleware).concat(owinDefaultApp);
+    var fn = compose(mw);
     var self = this;
     
     return function owinPipelineBuilder(owin, callback){
@@ -69,33 +46,27 @@ app.build = function(){
         }
         catch (err)
         {
-            errorRespond(owin,err);  callback(null);;
+            if (err==404)
+            {
+                owin.response.writeHead(404, {'Content-Type': 'text/html'});
+                owin.response.end('<h1>404 Not Found</h1><p>Could not find resource:</p><xmb>' + owin.request.path + '</xmb>');
+            }
+            else
+            {
+                owin.response.writeHead(500, {'Content-Type': 'text/html'});
+                owin.response.end('<h1>500 Server Error</h1><p>An error has occurred:</p><xmb>' + err + '</xmb> ');
+            }
+            callback(null);
         }
     }
 };
 
-app.buildAppFunc = app.build;
-
 app.httpCallback = OwinHttp(app.build());
 
 function compose(middleware){
-    return function owinPipeline(next, callback){
-        var i = middleware.length;
-        var prev = next || function owinPipelineLast(callback){ callback(null);};
-        var curr;
-        while (i--) {
-            curr = middleware[i];
-            prev = curr.bind(this, prev);
-        }
-        prev(callback);
-    }
-}
-
-function composeAsync(middleware){
     return function owinPipeline(owin){
-        
         var i = middleware.length;
-        var prev = function owinPipelineLast(){return new Promise(function (resolve,reject){resolve(null);});};
+        var prev = function (){return Promise.from(null);};
         var curr;
         while (i--) {
             curr = middleware[i];
@@ -105,69 +76,36 @@ function composeAsync(middleware){
     }
 }
 
-function errorRespond(owin, err)
-{
-    if (err==404)
-    {
-        owin.response.writeHead(404, {'Content-Type': 'text/html'});
-        owin.response.end('<h1>404 Not Found</h1><p>Could not find resource:</p><xmb>' + owin.request.path + '</xmb>');
-    }
-    else
-    {
-    owin.response.writeHead(500, {'Content-Type': 'text/html'});
-    owin.response.end('<h1>500 Server Error</h1><p>An error has occurred:</p><xmb>' + err + '</xmb> ');
-    }
-}
+// DEFAULT OWIN/JS HANDLERS:  RESPOND, DEFAULT APP
 
-function owinRespond(next, callback){
-    this.response.setHeader('X-Powered-By', 'OWIN-JS');
-    next(function appBuilderOuterMiddlewareCallback(err, result) {
-         if (err)
-         {
-               errorRespond(owin,err);
-               callback(null);
-         }
-         callback(err, result);
-         });
-}
-
-function owinRespondAsync(next){
+function owinRespondMiddleware(next){
     var owin = this;
     this.response.setHeader('X-Powered-By', 'OWIN-JS');
     return next().then(
                        function (){},
                        function appBuilderOuterMiddlewareError(err){
-                       console.log("respondAsync ERROR " + owin.request.scheme + ":\\"+ owin.request.path + "\r" + err);
+                       console.log("OwinJS Error Occured in Pipeline " + owin.request.scheme + ":\\"+ owin.request.path + "\r" + err);
                        
-                       errorRespond(owin,err);  return Promise.from(null);  }
+                       if (err==404)
+                       {
+                       owin.response.writeHead(404, {'Content-Type': 'text/html'});
+                       owin.response.end('<h1>404 Not Found</h1><p>Could not find resource:</p><xmb>' + owin.request.path + '</xmb>');
+                       }
+                       else
+                       {
+                       owin.response.writeHead(500, {'Content-Type': 'text/html'});
+                       owin.response.end('<h1>500 Server Error</h1><p>An error has occurred:</p><xmb>' + err + '</xmb> ');
+                       }
+                       
+                       return Promise.from(null);  }
                        );
 }
 
-
-function owinDefaultApp(next, callback){
-    if (this.response.statusCode === null)
-    {
-        console.log("defaultAppAsync HANDLED 404 " + this.request.scheme + ":\\"+ this.request.path );
-         callback(404);
-    }
-    else
-    {
-        console.log("defaultAppAsync IGNORED" + this.request.scheme + ":\\"+ this.request.path );
-        callback(null);
-    }
-}
-
-function owinDefaultAppAsync(next){
-    if (this.response.statusCode === null)
-    {
-        console.log("defaultAppAsync HANDLED 404 " + this.request.scheme + ":\\"+ this.request.path );
+function owinDefaultApp(next){
+    if (this["owinJS.Error"])
+        return Promise.reject(this["owinJS.Error"]);
+    else if (this.response.statusCode === null)
         return Promise.reject(404);
-    }
     else
-    {
-        console.log("defaultAppAsync IGNORED" + this.request.scheme + ":\\"+ this.request.path );
         return Promise.from(null);
-    }
 }
-
-
