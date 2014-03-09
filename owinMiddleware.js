@@ -1,3 +1,6 @@
+var Promise = require('promise');
+
+
 /**
  * Assures that the middleware is represented as OWIN/JS middleware promise format (promise) fn(next)  where next = (promise) function()
  *
@@ -10,7 +13,11 @@ exports = module.exports = function owinMiddleware(middleware){
     {
         switch(middleware.length)
         {
-                //fn(next)
+                //fn()
+            case 0:
+                return middleware;
+                
+                //fn(next) 
             case 1:
                 return middleware;
                 
@@ -137,8 +144,8 @@ function promiseFromOwinNodeCallBack(fn) {
 function promiseFromConnect2(fn) {
     return function convertedPromiseFromConnect2() {
         var owin = this;
-        owin.req=owin.request;
-        owin.res=owin.response;
+  //      owin.req=owin.request;
+  //      owin.res=owin.response;
         return new Promise(function (resolve, reject) {
                            try {
                            fn.call(owin, owin.req, owin.res);
@@ -163,8 +170,8 @@ function promiseFromConnect3(fn) {
     return function convertedPromiseFromConnect2(next) {
         var owin = this;
         var nextAdjusted = nextSyncFromOwinNextPromise(next);
-        owin.req=owin.request;
-        owin.res=owin.response;
+    //    owin.req=owin.request;
+    //    owin.res=owin.response;
         return new Promise(function (resolve, reject) {
                            try {
                            fn.call(owin, owin.req, owin.res, nextAdjusted);
@@ -189,8 +196,8 @@ function promiseFromConnect4(fn) {
     return function convertedPromiseFromConnect2(next) {
         var owin = this;
         var nextAdjusted = nextSyncFromOwinNextPromise(next);
-        owin.req=owin.request;
-        owin.res=owin.response;
+     //   owin.req=owin.request;
+     //   owin.res=owin.response;
         return new Promise(function (resolve, reject) {
                            try {
                            fn.call(owin, owin["owinjs.Error"], owin.req, owin.res, nextAdjusted);

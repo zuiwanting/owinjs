@@ -1,83 +1,27 @@
-exports = module.exports = function(connectApp) {
-    
-    return function(owin, nodeCallBack) {
-        
-        var self =  this;
-        
-        var url = owin.request.pathBase + owin.request.path + owin.request.queryString;
-        
-        var req = {
-            headers        :   owin.request.headers,
-            method         :   owin.request.method,
-            originalUrl    :    url,
-            query          :   owin.request.queryString,
-            url            :    url,
-            params         :    {},
-            session        :    {},
-            cookies        :    {},
-            body           :    {},
-            files          :    {}
-        };
-        
-        var res = {
-        chunkedEncoding:    false,
-            finished       :    false,
-            output         :    [],
-        outputEncodings:    [],
-            sendDate       :    false,
-        shouldkeepAlive:    false,
-            useChunkedEncdoingByDefault
-            :    Boolean,
-            viewCallbacks  :    [],
-            writable       :     true,
-            statusCode     :    -1,
-            cookies        :    {},
-            cookie         :    function (name, value, options) {
-                this.cookies[name] = { value: value, options: options};
-            },
-            clearCookie    :    function (name) { delete this.cookies[name]; },
-            status         :    function (code) { this.statusCode = code; return this;}
-        }
-        
-        var protocol = owin.request.protocol;
-        req.httpVersion = protocol.split("/")[1];
-        var httpVersionSplit = req.httpVersion.split(".");
-        req.httpVersionMajor = httpVersionSplit[0];
-        req.httpVersionMinor = httpVersionSplit[1];
-        
-        res.writeHead = function(statusCode, headers)
-        {
-            owin.response.writeHead(statusCode, headers);
-        }
-        
-        res.setHeader = function(key, value)
-        {
-            owin.response.setHeader(key, value);
-        }
-        
-        res.write = function(data)
-        {
-            owin.response.write(data);
-        }
-        
-        res.end = function(data)
-        {
-            owin.response.end(data);
-        }
-        
-        req.res = res;
-        res.req = req;
-        
-        connectApp(req, res);
-        
-        nodeCallBack(null);
-    }
+var path = require('path');
+var url = require('url');
+var owinContextHelpers = require('./owinContextHelpers.js');
+
+// PUBLIC EXPORTS
+
+/**
+ * Expands owin context object with various helper methods
+ *
+ * @method addReqRes
+ *
+ * @param context (object)  the javascript object on which to add the prototypes (i.e., the OWIN/JS context)
+ * @returns (void)
+ * @public
+ */
+exports.addReqRes = function addReqRes(context) {
+    context.req = new OwinHttpServerRequestBridge(context);
+    context.res = new OwinHttpServerResponseBridge(context);
 };
 
 /**
  * Representss an OWIN/JS bridge to Node.js http ServerRequest Object
  *
- * @class OwinHttpServerRequest
+ * @class OwinHttpServerRequestBridge
  * @constructor
  */
 function OwinHttpServerRequestBridge(owin){ this.context = owin;  };
@@ -90,160 +34,225 @@ function OwinHttpServerRequestBridge(owin){ this.context = owin;  };
  */
 function OwinHttpServerResponseBridge(owin){ this.context = owin;  };
 
-// INITIALIZATION
-private_InstallPrototypes();
+/**
+ * Self initiating method to create the prototype properties on the OwinHttpServerRequestBridge to match http ServerRequest object
+ *
+ * @method init_InstallRequestPrototypes
+ * @private
+ */
+(function init_InstallRequestPrototypes()
+ {
+ var req= OwinHttpServerRequestBridge;
+ 
+ Object.defineProperty(req.prototype, "socket", { get: function () {  return {}  } });
+ Object.defineProperty(req.prototype, "connection", { get: function () {  return {}  } });
+ 
+ Object.defineProperty(req.prototype, "httpVersion", {
+                       get: function () { return  this.context["owin.RequesProtocol"].split("/")[1];
+                       },
+                       set: function (val) { throw ("not implemented");    }
+                       });
+ 
+ Object.defineProperty(req.prototype, "httpVersionMajor", {
+                       get: function () { return this.context["owin.RequesProtocol"].split("/")[1].split(".")[0];
+                       },
+                       set: function (val) { throw ("not implemented");    }
+                       });
+ 
+ Object.defineProperty(req.prototype, "httpVersionMinor", {
+                       get: function () { return this.context["owin.RequesProtocol"].split("/")[1].split(".")[1];
+                       },
+                       set: function (val) { throw ("not implemented");    }
+                       });
+ 
+ Object.defineProperty(req.prototype, "originalUrl", {
+                       get: function () {
+                       if (!this._originalurl)
+                       this._originalUrl = this.url;
+                       return this._originalurl;
+                       }
+                       });
+ 
+ Object.defineProperty(req.prototype, "url", {
+                       get: function () {
+                       var owin = this.context;
+                       var uri =
+                       owin["owin.RequestPath"];
+                       
+                       if (owin["owin.RequestQueryString"] != "")
+                       uri += "?" + owin["owin.RequestQueryString"];
+                       
+                       }, set: function (val) {
+                       if (!this._originalurl)
+                       this._originalUrl = this.url;
+                       var urlParsed = url.parse(val);
+                       this.context["owin.RequestPathBase"] = "";
+                       this.context["owin.RequestPath"] = urlParsed.pathName;
+                       this.context["owin.RequestQueryString"] = urlParsed.query;
+                       }
+                       });
+ 
+ Object.defineProperty(req.prototype, "complete", {
+                       get: function () {  return false;   }
+                       });
+ 
+ Object.defineProperty(req.prototype, "headers", {
+                       get: function () {  return this.context["owin.RequestHeaders"];   }
+                       });
+ 
+ Object.defineProperty(req.prototype, "rawHeaders", {
+                       get: function () {
+                       var ret = [];
+                       for(var key in this.context["owin.RequestHeaders"]){
+                       ret.push(key);
+                       ret.push(this.context["owin.RequestHeaders"]);
+                       };
+                       return ret;
+                       }
+                       });
+ 
+ Object.defineProperty(req.prototype, "trailers", {
+                       get: function () {  return {};   }
+                       });
+ 
+ Object.defineProperty(req.prototype, "rawTrailers", {
+                       get: function () {  return []; }
+                       });
+ 
+ 
+ Object.defineProperty(req.prototype, "readable", {
+                       get: function () {  return true ; }
+                       });
+ 
+ 
+ Object.defineProperty(req.prototype, "method", {
+                       get: function () {  return this.context["owin.RequestMethod"];   },
+                       set: function (val) {  this.context["owin.RequestMethod"] = val;    }
+                       });
+ 
+ 
+ 
+ 
+ 
+ }).call(global);
 
-function private_InstallPrototypes()
+/**
+ * Self initiating method to create the prototype properties on the OwinHttpServerResponseBridge to match http ServerResponse object
+ *
+ * @method init_InstallReesponsePrototypes
+ * @private
+ */
+(function init_InstallReesponsePrototypes()
+ {
+ var res= OwinHttpServerResponseBridge;
+ 
+ Object.defineProperty(res.prototype, "writable", {
+                       get: function () { return true;   }
+                       });
+ 
+ Object.defineProperty(res.prototype, "socket", { get: function () {  return {}  } });
+ Object.defineProperty(res.prototype, "connection", { get: function () {  return {}  } });
+ 
+ Object.defineProperty(res.prototype, "statusCode", {
+                       get: function () { return this.context["owin.ResponseStatusCode"];  },
+                       set: function (val) { return this.context["owin.ResponseStatusCode"] = val;  },
+                       });
+ 
+ Object.defineProperty(res.prototype, "headersSent", {
+                       get: function () { return  false;  }
+                       });
+ 
+ Object.defineProperty(res.prototype, "sendDate", {
+                       get: function () { return true; },
+                       set: function (val) { /* ignore */  },
+                       });
+ 
+ 
+ res.prototype.status =  function (code) { this.context["owin.ResponseStatusCode"] = code; return this;}
+ 
+ 
+ res.prototype.writeContinue = function writeContinue(statusCode, headers)
+ {
+ throw {name : "NotImplementedError", message : "writeContinue HTTP 100 not implemented"};
+ }
+ 
+ res.prototype.setTimeout = function setTimeout(msecs, callback)
+ {
+ throw {name : "NotImplementedError", message : "set Timeout not implemented as no sockets needed in OWIN/JS"};
+ }
+ 
+ res.prototype.addTrailers = function addTrailers(trailers)
+ {
+ throw {name : "NotImplementedError", message : "HTTP Trailers (trailing headers) not supported"};
+ }
+ 
+ res.prototype.setHeader = function(key, value)
+ {
+ this.context.response.setHeader(key, value);
+ }
+ 
+ res.prototype.getHeader = function(key)
+ {
+ return this.context.response.getHeader(key);
+ }
+ 
+ res.prototype.removeHeader = function(key)
+ {
+ this.context.response.removeHeader(key);
+ }
+ 
+ res.prototype.writeHead = function(statusCode, reasonPhrase, headers)
+ {
+ this.context.response.writeHead(statusCode, reasonPhrase, headers);
+ }
+
+ var Stream = require('stream');
+ var Writable = Stream.Writable;
+ var EventEmitter = require('events').EventEmitter;
+
+ owinContextHelpers.cloneResponseBodyPrototype(res.prototype,EventEmitter.prototype);
+ owinContextHelpers.cloneResponseBodyPrototype(res.prototype,Stream.prototype);
+ owinContextHelpers.cloneResponseBodyPrototype(res.prototype,Writable.prototype);
+ 
+ }).call(global);
+
+/**
+ * Create alias access methods on context.response for context["owin.ResponseBody"] for given stream/writable prototype
+ *
+ * Note: the alias will be a collection of both functions (which simply shell out to target function) and valuetypes (which
+ * have a getter and setter defined which each shell out to the target property)
+ *
+ * @method private_cloneResponseBodyPrototype
+ * @param targetObjectPrototype (__proto__)  the prototype object for the context.response object on which the alias properties are set
+ * @param sourceObjectprototype (__proto__)  the prototpye object for the generic stream/writable on which to enumerate all properties
+ * @returns (void)
+ * @private
+ */
+function private_cloneResponseBodyPrototype(targetObjectPrototype, sourceObjectprototype)
 {
-    var req= OwinHttpServerRequestBridge;
-    var res= OwinHttpServerResponseBridge;
+    Object.getOwnPropertyNames(sourceObjectprototype).forEach(function (_property)
+                                                              {
+                                                              if (typeof( sourceObjectprototype[_property]) === 'function')
+                                                              {
+                                                              targetObjectPrototype[_property] = function(){
+                                                              var body =this.context["owin.ResponseBody"];
+                                                              return body[_property].apply(body, Array.prototype.slice.call(arguments));
+                                                              };
+                                                              }
+                                                              else
+                                                              {
+                                                              Object.defineProperty(targetObjectPrototype, _property, {
+                                                                                    
+                                                                                    get: function () {
+                                                                                    return this.context["owin.ResponseBody"][_property];
+                                                                                    },
+                                                                                    
+                                                                                    set: function (val) {
+                                                                                    this.context["owin.ResponseBody"][_property] = val;
+                                                                                    }
+                                                                                    
+                                                                                    });
+                                                              }
+                                                              });
     
-    // REQUEST
-    Object.defineProperty(req.prototype, "headers", {
-                          get: function () {  return this.context["owin.RequestHeaders"];   },
-                          set: function (val) {  this.context["owin.RequestHeaders"] = val;    }
-                          });
-    
-    Object.defineProperty(req.prototype, "method", {
-                          get: function () {  return this.context["owin.RequestMethod"];   },
-                          set: function (val) {  this.context["owin.RequestMethod"] = val;    }
-                          });
-    
-    Object.defineProperty(req.prototype, "originalUrl", {
-                          get: function () {  return this.context["owin.RequestPathBase"] + this.context["owin.RequestPath"] + this.context["owin.RequestQueryString"]
-                          },
-                          set: function (val) { throw ("not implemented");    }
-                          });
-    
-    Object.defineProperty(req.prototype, "params", {
-                          get: function () {  throw ("not implemented");
-                          },
-                          set: function (val) { throw ("not implemented");    }
-                          });
-    
-    Object.defineProperty(req.prototype, "session", {
-                          get: function () {  throw ("not implemented");
-                          },
-                          set: function (val) { throw ("not implemented");    }
-                          });
-    
-    Object.defineProperty(req.prototype, "cookies", {
-                          get: function () {  throw ("not implemented");
-                          },
-                          set: function (val) { throw ("not implemented");    }
-                          });
-    
-    Object.defineProperty(req.prototype, "body", {
-                          get: function () {  return this.context["owin.RequestBody"];   },
-                          set: function (val) {   this.context["owin.RequestBody"] = val;    }
-                          });
-    
-    Object.defineProperty(req.prototype, "files", {
-                          get: function () {  throw ("not implemented");
-                          },
-                          set: function (val) { throw ("not implemented");    }
-                          });
-    
-    Object.defineProperty(req.prototype, "httpVersion", {
-                          get: function () { return  this.context["owin.RequesProtocol"].split("/")[1];
-                          },
-                          set: function (val) { throw ("not implemented");    }
-                          });
-    
-    Object.defineProperty(req.prototype, "httpVersionMajor", {
-                          get: function () { return this.context["owin.RequesProtocol"].split("/")[1].split(".")[0];
-                          },
-                          set: function (val) { throw ("not implemented");    }
-                          });
-    
-    Object.defineProperty(req.prototype, "httpVersionMinor", {
-                          get: function () { return this.context["owin.RequesProtocol"].split("/")[1].split(".")[1];
-                          },
-                          set: function (val) { throw ("not implemented");    }
-                          });
-    
-    // RESPONSE
-    Object.defineProperty(res.prototype, "chunkedEncoding", {
-                          get: function () {  throw ("not implemented") },
-                          set: function (val) {   throw ("not implemented");  }
-                          });
-    
-    Object.defineProperty(res.prototype, "finished", {
-                          get: function () {  throw ("not implemented")  },
-                          set: function (val) {  throw ("not implemented");    }
-                          });
-    
-    Object.defineProperty(res.prototype, "output", {
-                          get: function () { throw ("not implemented");   },
-                          set: function (val) {  throw ("not implemented");    }
-                          });
-    Object.defineProperty(res.prototype, "sendDate", {
-                          get: function () { throw ("not implemented");   },
-                          set: function (val) {  throw ("not implemented");    }
-                          });
-    Object.defineProperty(res.prototype, "shouldkeepAlive", {
-                          get: function () { throw ("not implemented");   },
-                          set: function (val) {  throw ("not implemented");    }
-                          });
-    Object.defineProperty(res.prototype, "useChunkedEncdoingByDefault", {
-                          get: function () { throw ("not implemented");   },
-                          set: function (val) {  throw ("not implemented");    }
-                          });
-    Object.defineProperty(res.prototype, "viewCallbacks", {
-                          get: function () { throw ("not implemented");   },
-                          set: function (val) {  throw ("not implemented");    }
-                          });
-    
-    Object.defineProperty(res.prototype, "writable", {
-                          get: function () { throw ("not implemented");   },
-                          set: function (val) {  throw ("not implemented");    }
-                          });
-    
-    Object.defineProperty(res.prototype, "statusCode", {
-                          get: function () { return this.context["owin.ResponseStatusCode"];  },
-                          set: function (val) { this.context["owin.ResponseStatusCode"] = val;   }
-                          });
-    
-    Object.defineProperty(res.prototype, "cookies", {
-                          get: function () { throw ("not implemented");   },
-                          set: function (val) { throw ("not implemented");  }
-                          });
-    
-    
-    res.prototype.cookie = function (name, value, options) {
-        this.cookies[name] = { value: value, options: options};
-    }
-    
-    res.prototype.clearCookie =  function (name) { delete this.cookies[name]; }
-    
-    res.prototype.status =  function (code) { this.context["owin.ResponseStatusCode"] = code; return this;}
-    
-    
-    res.prototype.writeHead = function(statusCode, headers)
-    {
-        this.context.response.writeHead(statusCode, headers);
-    }
-    
-    res.prototype.setHeader = function(key, value)
-    {
-        this.context.response.setHeader(key, value);
-    }
-    
-    res.prototype.write = function(data)
-    {
-        this.context.response.write(data);
-    }
-    
-    res.prototype.end = function(data)
-    {
-        tthis.context.response.end(data);
-    }
-    
-    Object.defineProperty(req.prototype, "res", {
-                          get: function () { return this.context.res   },
-                          });
-    Object.defineProperty(res.prototype, "req", {
-                          get: function () { return this.context.req   },
-                          });
 }
-

@@ -46,16 +46,7 @@ app.build = function(){
         }
         catch (err)
         {
-            if (err==404)
-            {
-                owin.response.writeHead(404, {'Content-Type': 'text/html'});
-                owin.response.end('<h1>404 Not Found</h1><p>Could not find resource:</p><xmb>' + owin.request.path + '</xmb>');
-            }
-            else
-            {
-                owin.response.writeHead(500, {'Content-Type': 'text/html'});
-                owin.response.end('<h1>500 Server Error</h1><p>An error has occurred:</p><xmb>' + err + '</xmb> ');
-            }
+            owinDefaultError.call(owin,err);
             callback(null);
         }
     }
@@ -76,7 +67,7 @@ function compose(middleware){
     }
 }
 
-// DEFAULT OWIN/JS HANDLERS:  RESPOND, DEFAULT APP
+// DEFAULT OWIN/JS HANDLERS:  RESPOND, DEFAULT APP, ERROR HELPER
 
 function owinRespondMiddleware(next){
     var owin = this;
@@ -84,19 +75,7 @@ function owinRespondMiddleware(next){
     return next().then(
                        function (){},
                        function appBuilderOuterMiddlewareError(err){
-                       console.log("OwinJS Error Occured in Pipeline " + owin.request.scheme + ":\\"+ owin.request.path + "\r" + err);
-                       
-                       if (err==404)
-                       {
-                       owin.response.writeHead(404, {'Content-Type': 'text/html'});
-                       owin.response.end('<h1>404 Not Found</h1><p>Could not find resource:</p><xmb>' + owin.request.path + '</xmb>');
-                       }
-                       else
-                       {
-                       owin.response.writeHead(500, {'Content-Type': 'text/html'});
-                       owin.response.end('<h1>500 Server Error</h1><p>An error has occurred:</p><xmb>' + err + '</xmb> ');
-                       }
-                       
+                       owinDefaultError.call(owin,err);
                        return Promise.from(null);  }
                        );
 }
@@ -108,4 +87,19 @@ function owinDefaultApp(next){
         return Promise.reject(404);
     else
         return Promise.from(null);
+}
+
+function owinDefaultError(err){
+    console.log("OwinJS Error Occured in Pipeline " + this.request.scheme + ":\\"+ this.request.path + "\r" + err);
+    
+    if (err==404)
+    {
+        this.response.writeHead(404, {'Content-Type': 'text/html'});
+        this.response.end('<h1>404 Not Found</h1><p>Could not find resource:</p><xmb>' + this.request.path + '</xmb>');
+    }
+    else
+    {
+        this.response.writeHead(500, {'Content-Type': 'text/html'});
+        this.response.end('<h1>500 Server Error</h1><p>An error has occurred:</p><xmb>' + err + '</xmb> ');
+    }
 }
