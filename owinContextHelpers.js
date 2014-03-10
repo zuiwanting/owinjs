@@ -77,7 +77,7 @@ exports.refreshPrototypeOwinContext =function(owinObject)
 }
 
 /**
- * Create alias access methods on context.response for context["owin.ResponseBody"] for given stream/writable prototype
+ * Create alias access methods on context.response for context body elemeent for given stream/readable/writable prototype
  *
  * Note: the alias will be a collection of both functions (which simply shell out to target function) and valuetypes (which
  * have a getter and setter defined which each shell out to the target property)
@@ -85,17 +85,18 @@ exports.refreshPrototypeOwinContext =function(owinObject)
  * @method private_cloneResponseBodyPrototype
  * @param targetObjectPrototype (__proto__)  the prototype object for the context.response object on which the alias properties are set
  * @param sourceObjectprototype (__proto__)  the prototpye object for the generic stream/writable on which to enumerate all properties
+ * @param owinContextKey (string) "owin.RequestBody" or "owin.ResponseBody"
  * @returns (void)
  * @private
  */
-exports.cloneResponseBodyPrototype=function(targetObjectPrototype, sourceObjectprototype)
+exports.cloneResponseBodyPrototype=function(targetObjectPrototype, sourceObjectprototype, owinContextKey)
 {
     Object.getOwnPropertyNames(sourceObjectprototype).forEach(function (_property)
                                                               {
                                                               if (typeof( sourceObjectprototype[_property]) === 'function')
                                                               {
                                                               targetObjectPrototype[_property] = function(){
-                                                              var body =this.context["owin.ResponseBody"];
+                                                              var body =this.context[owinContextKey];
                                                               return body[_property].apply(body, Array.prototype.slice.call(arguments));
                                                               };
                                                               }
@@ -104,11 +105,11 @@ exports.cloneResponseBodyPrototype=function(targetObjectPrototype, sourceObjectp
                                                               Object.defineProperty(targetObjectPrototype, _property, {
                                                                                     
                                                                                     get: function () {
-                                                                                    return this.context["owin.ResponseBody"][_property];
+                                                                                    return this.context[owinContextKey][_property];
                                                                                     },
                                                                                     
                                                                                     set: function (val) {
-                                                                                    this.context["owin.ResponseBody"][_property] = val;
+                                                                                    this.context[owinContextKey][_property] = val;
                                                                                     }
                                                                                     
                                                                                     });

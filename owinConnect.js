@@ -16,7 +16,7 @@ var owinContextHelpers = require('./owinContextHelpers.js');
 exports.addReqRes = function addReqRes(context) {
     context.req = new OwinHttpServerRequestBridge(context);
     context.res = new OwinHttpServerResponseBridge(context);
-};
+ };
 
 /**
  * Representss an OWIN/JS bridge to Node.js http ServerRequest Object
@@ -35,13 +35,15 @@ function OwinHttpServerRequestBridge(owin){ this.context = owin;  };
 function OwinHttpServerResponseBridge(owin){ this.context = owin;  };
 
 /**
- * Self initiating method to create the prototype properties on the OwinHttpServerRequestBridge to match http ServerRequest object
+ * Self initiating method to create the prototype properties on the bridges to match http ServerRequest and ServerResponse objects
  *
- * @method init_InstallRequestPrototypes
+ * @method init_InstallRequestResponsePrototypes
  * @private
  */
-(function init_InstallRequestPrototypes()
+(function init_InstallRequestResponsePrototypes()
  {
+ 
+ //REQUEST
  var req= OwinHttpServerRequestBridge;
  
  Object.defineProperty(req.prototype, "socket", { get: function () {  return {}  } });
@@ -131,20 +133,8 @@ function OwinHttpServerResponseBridge(owin){ this.context = owin;  };
                        });
  
  
- 
- 
- 
- }).call(global);
-
-/**
- * Self initiating method to create the prototype properties on the OwinHttpServerResponseBridge to match http ServerResponse object
- *
- * @method init_InstallReesponsePrototypes
- * @private
- */
-(function init_InstallReesponsePrototypes()
- {
- var res= OwinHttpServerResponseBridge;
+ //RESPONSE
+  var res= OwinHttpServerResponseBridge;
  
  Object.defineProperty(res.prototype, "writable", {
                        get: function () { return true;   }
@@ -205,14 +195,21 @@ function OwinHttpServerResponseBridge(owin){ this.context = owin;  };
  {
  this.context.response.writeHead(statusCode, reasonPhrase, headers);
  }
+ 
+ //ADD BODY PROTOYPE ALIASES FOR REQUEST AND RESPONSE
 
  var Stream = require('stream');
  var Writable = Stream.Writable;
+ var Readable = Stream.Readable;
  var EventEmitter = require('events').EventEmitter;
 
- owinContextHelpers.cloneResponseBodyPrototype(res.prototype,EventEmitter.prototype);
- owinContextHelpers.cloneResponseBodyPrototype(res.prototype,Stream.prototype);
- owinContextHelpers.cloneResponseBodyPrototype(res.prototype,Writable.prototype);
+ owinContextHelpers.cloneResponseBodyPrototype(req.prototype,EventEmitter.prototype, "owin.RequestBody");
+ owinContextHelpers.cloneResponseBodyPrototype(req.prototype,Stream.prototype, "owin.RequestBody");
+ owinContextHelpers.cloneResponseBodyPrototype(req.prototype,Readable.prototype, "owin.RequestBody");
+ 
+ owinContextHelpers.cloneResponseBodyPrototype(res.prototype,EventEmitter.prototype, "owin.ResponseBody");
+ owinContextHelpers.cloneResponseBodyPrototype(res.prototype,Stream.prototype, "owin.ResponseBody");
+ owinContextHelpers.cloneResponseBodyPrototype(res.prototype,Writable.prototype, "owin.ResponseBody");
  
  }).call(global);
 

@@ -1,7 +1,8 @@
 var util = require('util');
 var Stream = require('stream');
 var Writable = Stream.Writable;
-var EE = require('events').EventEmitter;
+var Readable = Stream.Readable;
+var EventEmitter = require('events').EventEmitter;
 
 var owinConnect = require('./owinConnect.js');
 var owinContextHelpers = require('./owinContextHelpers.js');
@@ -22,9 +23,14 @@ var const_Instance = require('./guid.js').guid();
  owinContextHelpers.refreshPrototype(_temp_context, "server.", OwinServer.prototype)
  owinContextHelpers.refreshPrototype(_temp_context, "nodeAppKit.", OwinNodeAppKit.prototype)
  
- owinContextHelpers.cloneResponseBodyPrototype(OwinResponse.prototype,EE.prototype);
- owinContextHelpers.cloneResponseBodyPrototype(OwinResponse.prototype,Stream.prototype);
- owinContextHelpers.cloneResponseBodyPrototype(OwinResponse.prototype,Writable.prototype);
+ owinContextHelpers.cloneResponseBodyPrototype(OwinResponse.prototype,EventEmitter.prototype, "owin.ResponseBody");
+ owinContextHelpers.cloneResponseBodyPrototype(OwinResponse.prototype,Stream.prototype, "owin.ResponseBody");
+ owinContextHelpers.cloneResponseBodyPrototype(OwinResponse.prototype,Writable.prototype, "owin.ResponseBody");
+ 
+ owinContextHelpers.cloneResponseBodyPrototype(OwinRequest.prototype,EventEmitter.prototype, "owin.RequestBody");
+ owinContextHelpers.cloneResponseBodyPrototype(OwinRequest.prototype,Stream.prototype, "owin.RequestBody");
+ owinContextHelpers.cloneResponseBodyPrototype(OwinRequest.prototype,Readable.prototype, "owin.RequestBody");
+ 
  _temp_context = null;
  }).call(this);
 
@@ -46,7 +52,12 @@ var const_Instance = require('./guid.js').guid();
  */
 exports.expandContext = expandContext;
 
-function expandContext(context) {
+function expandContext(context, addReqRes) {
+    var isOwinJsNative = true;
+    
+    if (context.req)
+        isOwinJsNative = false;
+    
     context.request = new OwinRequest(context);
     context.response = new OwinResponse(context);
     context.owin = new OwinOwin(context);
@@ -56,7 +67,7 @@ function expandContext(context) {
     if (context["owinjs.id"] != const_Instance)
     {
         console.log("OwinJS/owinjs started; instance=" + const_Instance);
-    
+        
         // add default aliases to owinContext if needed;  not currently in default OWIN/JS spec
         // owinContextHelpers.refreshPrototypeOwinContext(context);
         
@@ -68,9 +79,12 @@ function expandContext(context) {
             return util.inspect(this).replace(/\n/g,"\r");
         }
         
-      }
+        if (isOwinJsNative)
+            initOwinNativeContextPrototype(context.constructor.prototype);
+    }
     
-    owinConnect.addReqRes(context);
+    if (isOwinJsNative)
+        owinConnect.addReqRes(context);
 };
 
 /**
@@ -147,22 +161,10 @@ function OwinNodeAppKit(owin){ this.context = owin;  };
                        return uri;
                        }});
  
- OwinResponse.prototype.writeHead = function OwinResponseWriteHead(statusCode, headers)
- {
- this.context["owin.ResponseStatusCode"] = statusCode;
- 
- var keys = Object.keys(headers);
- for (var i = 0; i < keys.length; i++) {
- var k = keys[i];
- if (k) this.context["owin.ResponseHeaders"][k] = headers[k];
- }
- };
- 
- OwinResponse.prototype.setHeader = function OwinResponseSetHeader(key, value)
- {
- this.context["owin.ResponseHeaders"][key] = value;
- }
- 
+ OwinResponse.prototype.writeHead= function(){this.context["owinjs.writeHead"].apply(this.context, Array.prototype.slice.call(arguments));};
+ OwinResponse.prototype.getHeader= function(){this.context["owinjs.getResponseHeader"].apply(this.context, Array.prototype.slice.call(arguments));};
+ OwinResponse.prototype.removeHeader = function(){this.context["owinjs.removeResponseHeader"].apply(this.context, Array.prototype.slice.call(arguments));};
+ OwinResponse.prototype.setHeader = function(){this.context["owinjs.setResponseHeader"].apply(this.context, Array.prototype.slice.call(arguments));};
  
  Object.defineProperty(OwinServer.prototype, "instance", {value : const_Instance,
                        writable : false,
@@ -170,6 +172,37 @@ function OwinNodeAppKit(owin){ this.context = owin;  };
                        configurable : false});
  
  }).call(this);
+
+
+function initOwinNativeContextPrototype(contextPrototype){
+    
+    contextPrototype["owinjs.writeHead"] = function OwinResponseWriteHead(statusCode, headers)
+    {
+        this["owin.ResponseStatusCode"] = statusCode;
+        
+        var keys = Object.keys(headers);
+        for (var i = 0; i < keys.length; i++) {
+            var k = keys[i];
+            if (k) this["owin.ResponseHeaders"][k] = headers[k];
+        }
+    };
+    
+    contextPrototype["owinjs.setResponseHeader"] = function OwinResponseSetHeader(key, value)
+    {
+        this["owin.ResponseHeaders"][key] = value;
+    }
+    
+    contextPrototype["owinjs.getResponseHeader"] = function OwinResponseGetHeader(key)
+    {
+        return this["owin.ResponseHeaders"][key];
+        
+    }
+    
+    contextPrototype["owinjs.removeResponseHeader"] = function OwinResponseRemoveHeader(key, value)
+    {
+        delete this["owin.ResponseHeaders"][key];
+    }
+}
 
 /**
  * Creates a new OWIN/JS Context Object with all empty or default fields

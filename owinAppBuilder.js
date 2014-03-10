@@ -16,6 +16,7 @@ var Promise = require('promise');
 var OwinHttp = require('./owinHttp.js');
 var OwinContext = require('./owinContext');
 var OwinMiddleware = require('./owinMiddleware');
+var util = require('util');
 
 appBuilder = function() {
     this.properties = {};
@@ -32,27 +33,34 @@ app.use = function(mw){
  };
 
 app.build = function(){
+    
     var mw = [owinRespondMiddleware].concat(this.middleware).concat(owinDefaultApp);
     var fn = compose(mw);
     var self = this;
     
     return function owinPipelineBuilder(owin, callback){
         OwinContext.expandContext(owin);
-        
+                
         owin.app = self;
         try {
-            return fn(owin).then(function owinPipelineDone(){
-                                 callback(null)},function(err){ errorRespond(owin,err);  callback(null);});
+            return fn(owin).then(function(){
+                                 callback(null)},
+                                 function(err){
+                                 errorRespond(owin,err);
+                                 callback(null);});
         }
         catch (err)
         {
+            throw(err);
             owinDefaultError.call(owin,err);
             callback(null);
         }
     }
 };
 
-app.httpCallback = OwinHttp(app.build());
+app.buildHttp = function(){
+    return OwinHttp(app.build.call(this));
+};
 
 function compose(middleware){
     return function owinPipeline(owin){
@@ -71,11 +79,13 @@ function compose(middleware){
 
 function owinRespondMiddleware(next){
     var owin = this;
+    
     this.response.setHeader('X-Powered-By', 'OWIN-JS');
+    
     return next().then(
-                       function (){},
-                       function appBuilderOuterMiddlewareError(err){
-                       owinDefaultError.call(owin,err);
+                       function (){ return Promise.from(null);
+                       },
+                       function (err){   owinDefaultError.call(owin,err);
                        return Promise.from(null);  }
                        );
 }
@@ -86,7 +96,9 @@ function owinDefaultApp(next){
     else if (this.response.statusCode === null)
         return Promise.reject(404);
     else
+    {
         return Promise.from(null);
+    }
 }
 
 function owinDefaultError(err){
