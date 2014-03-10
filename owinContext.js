@@ -7,6 +7,7 @@ var EventEmitter = require('events').EventEmitter;
 var owinConnect = require('./owinConnect.js');
 var owinContextHelpers = require('./owinContextHelpers.js');
 var const_Instance = require('./guid.js').guid();
+var constants = require('./owinConstants.js');
 
 /**
  * Run Once Self Initiating Function
@@ -21,15 +22,15 @@ var const_Instance = require('./guid.js').guid();
  owinContextHelpers.refreshPrototype(_temp_context, "owin.Response", OwinResponse.prototype)
  owinContextHelpers.refreshPrototype(_temp_context, "owin.", OwinOwin.prototype)
  owinContextHelpers.refreshPrototype(_temp_context, "server.", OwinServer.prototype)
- owinContextHelpers.refreshPrototype(_temp_context, "nodeAppKit.", OwinNodeAppKit.prototype)
+ owinContextHelpers.refreshPrototype(_temp_context, "owinjs.", OwinNodeAppKit.prototype)
  
- owinContextHelpers.cloneResponseBodyPrototype(OwinResponse.prototype,EventEmitter.prototype, "owin.ResponseBody");
- owinContextHelpers.cloneResponseBodyPrototype(OwinResponse.prototype,Stream.prototype, "owin.ResponseBody");
- owinContextHelpers.cloneResponseBodyPrototype(OwinResponse.prototype,Writable.prototype, "owin.ResponseBody");
+ owinContextHelpers.cloneBodyPrototypeAlias(OwinResponse.prototype,EventEmitter.prototype, "owin.ResponseBody");
+ owinContextHelpers.cloneBodyPrototypeAlias(OwinResponse.prototype,Stream.prototype, "owin.ResponseBody");
+ owinContextHelpers.cloneBodyPrototypeAlias(OwinResponse.prototype,Writable.prototype, "owin.ResponseBody");
  
- owinContextHelpers.cloneResponseBodyPrototype(OwinRequest.prototype,EventEmitter.prototype, "owin.RequestBody");
- owinContextHelpers.cloneResponseBodyPrototype(OwinRequest.prototype,Stream.prototype, "owin.RequestBody");
- owinContextHelpers.cloneResponseBodyPrototype(OwinRequest.prototype,Readable.prototype, "owin.RequestBody");
+ owinContextHelpers.cloneBodyPrototypeAlias(OwinRequest.prototype,EventEmitter.prototype, "owin.RequestBody");
+ owinContextHelpers.cloneBodyPrototypeAlias(OwinRequest.prototype,Stream.prototype, "owin.RequestBody");
+ owinContextHelpers.cloneBodyPrototypeAlias(OwinRequest.prototype,Readable.prototype, "owin.RequestBody");
  
  _temp_context = null;
  }).call(this);
@@ -64,14 +65,14 @@ function expandContext(context, addReqRes) {
     context.server = new OwinServer(context);
     context.nodeAppKit = new OwinNodeAppKit(context);
     
-    if (context["owinjs.id"] != const_Instance)
+    if (context[constants.owinjs.id] != const_Instance)
     {
         console.log("OwinJS/owinjs started; instance=" + const_Instance);
         
         // add default aliases to owinContext if needed;  not currently in default OWIN/JS spec
         // owinContextHelpers.refreshPrototypeOwinContext(context);
         
-        Object.defineProperty(context.constructor.prototype, "owinjs.id", {value : const_Instance,
+        Object.defineProperty(context.constructor.prototype, constants.owinjs.id, {value : const_Instance,
                               writable : false, enumerable : true, configurable : false});
         
         context.constructor.prototype.toString = function()
@@ -143,7 +144,7 @@ function OwinNodeAppKit(owin){ this.context = owin;  };
  */
 (function initPrototypes(){
  Object.defineProperty(OwinRequest.prototype, "host", {   get: function () {
-                       return this.context["owin.RequestHeaders"]["host"];
+                       return this.context[constants.owinjs.getRequestHeader]("host");
                        }});
  
  Object.defineProperty(OwinRequest.prototype, "originalUrl", {   get: function () {
@@ -161,47 +162,48 @@ function OwinNodeAppKit(owin){ this.context = owin;  };
                        return uri;
                        }});
  
- OwinResponse.prototype.writeHead= function(){this.context["owinjs.writeHead"].apply(this.context, Array.prototype.slice.call(arguments));};
- OwinResponse.prototype.getHeader= function(){this.context["owinjs.getResponseHeader"].apply(this.context, Array.prototype.slice.call(arguments));};
- OwinResponse.prototype.removeHeader = function(){this.context["owinjs.removeResponseHeader"].apply(this.context, Array.prototype.slice.call(arguments));};
- OwinResponse.prototype.setHeader = function(){this.context["owinjs.setResponseHeader"].apply(this.context, Array.prototype.slice.call(arguments));};
- 
- Object.defineProperty(OwinServer.prototype, "instance", {value : const_Instance,
-                       writable : false,
-                       enumerable : true,
-                       configurable : false});
+ OwinResponse.prototype.writeHead= function(){this.context[constants.owinjs.writeHead].apply(this.context, Array.prototype.slice.call(arguments));};
+ OwinResponse.prototype.getHeader= function(){this.context[constants.owinjs.getResponseHeader].apply(this.context, Array.prototype.slice.call(arguments));};
+ OwinResponse.prototype.removeHeader = function(){this.context[constants.owinjs.removeResponseHeader].apply(this.context, Array.prototype.slice.call(arguments));};
+ OwinResponse.prototype.setHeader = function(){this.context[constants.owinjs.setResponseHeader].apply(this.context, Array.prototype.slice.call(arguments));};
+ OwinRequest.prototype.getHeader = function(){this.context[constants.owinjs.getRequestHeader].apply(this.context, Array.prototype.slice.call(arguments));};
+
  
  }).call(this);
 
 
 function initOwinNativeContextPrototype(contextPrototype){
     
-    contextPrototype["owinjs.writeHead"] = function OwinResponseWriteHead(statusCode, headers)
+    contextPrototype[constants.owinjs.writeHead] = function OwinResponseWriteHead(statusCode, headers)
     {
         this["owin.ResponseStatusCode"] = statusCode;
         
         var keys = Object.keys(headers);
         for (var i = 0; i < keys.length; i++) {
             var k = keys[i];
-            if (k) this["owin.ResponseHeaders"][k] = headers[k];
+            if (k) this[constants.owinjs.setResponseHeader].call(this, k, headers[k]);
         }
     };
     
-    contextPrototype["owinjs.setResponseHeader"] = function OwinResponseSetHeader(key, value)
+    contextPrototype[constants.owinjs.setResponseHeader] = function OwinResponseSetHeader(key, val)
     {
-        this["owin.ResponseHeaders"][key] = value;
+        private_setIgnoreCase(this["owin.ResponseHeaders"], key, val);
     }
     
-    contextPrototype["owinjs.getResponseHeader"] = function OwinResponseGetHeader(key)
+    contextPrototype[constants.owinjs.getResponseHeader] = function OwinResponseGetHeader(key)
     {
-        return this["owin.ResponseHeaders"][key];
-        
+        return private_getIgnoreCase(this["owin.ResponseHeaders"], key);
     }
     
-    contextPrototype["owinjs.removeResponseHeader"] = function OwinResponseRemoveHeader(key, value)
+    contextPrototype[constants.owinjs.removeResponseHeader] = function OwinResponseRemoveHeader(key, value)
     {
-        delete this["owin.ResponseHeaders"][key];
+          return private_deleteIgnoreCase(this["owin.ResponseHeaders"], key);
     }
+    
+    contextPrototype[constants.owinjs.getRequestHeader] = function OwinResponseGetHeader(key)
+    {
+        return private_getIgnoreCase(this["owin.RequestHeaders"], key);
+     }
 }
 
 /**
@@ -227,8 +229,71 @@ function OwinDefaultContext() {
     this["owin.ResponseBody"] = {};
     this["owin.ResponseHeaders"]["Content-Length"]= "-1";
     
-    this["server.appId"] = "";
-    this["nodeAppKit.callCancelledSource"] = {};
+    this[constants.commonkeys.AppId] = "";
+    this[constants.commonkeys.CallCancelledSoure] = {};
     this["owin.Version"] = "";
     this["owin.callCancelled"] = {};
 };
+
+/**
+ * Adds or updates a javascript object, case insensitive for key property
+ *
+ * @method private_setIgnoreCase
+ * @param obj (object)  the object to search
+ * @param key (string) the new or existing property name
+ * @param val (string) the new property value
+ * @private
+ */
+function private_setIgnoreCase(obj, key, val)
+{
+     key = key.toLowerCase();
+    for(var p in obj){
+        if(obj.hasOwnProperty(p) && key == p.toLowerCase()){
+            obj[p] = val;
+            return;
+        }
+    }
+    obj[key] = val;
+   
+}
+
+/**
+ * Returns a javascript object, case insensitive for key property
+ *
+ * @method private_setIgnoreCase
+ * @param obj (object)  the object to search
+ * @param key (string) the new or existing property name
+ * @param val (string) the new property value
+ * @private
+ */
+function private_getIgnoreCase(obj, key)
+{
+    key = key.toLowerCase();
+    for(var p in obj){
+        if(obj.hasOwnProperty(p) && key == p.toLowerCase()){
+            return obj[p];
+        }
+    }
+    return null;
+}
+
+/**
+ * Returns a javascript object, case insensitive for key property
+ *
+ * @method private_setIgnoreCase
+ * @param obj (object)  the object to search
+ * @param key (string) the new or existing property name
+ * @return (bool) true if successful, false if not
+ * @private
+ */
+function private_deleteIgnoreCase(obj, key)
+{
+    key = key.toLowerCase();
+    for(var p in obj){
+        if(obj.hasOwnProperty(p) && key == p.toLowerCase()){
+            delete obj[p];
+            return true;
+        }
+    }
+    return false;
+}

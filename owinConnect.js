@@ -50,19 +50,19 @@ function OwinHttpServerResponseBridge(owin){ this.context = owin;  };
  Object.defineProperty(req.prototype, "connection", { get: function () {  return {}  } });
  
  Object.defineProperty(req.prototype, "httpVersion", {
-                       get: function () { return  this.context["owin.RequesProtocol"].split("/")[1];
+                       get: function () { return  this.context["owin.RequestProtocol"].split("/")[1];
                        },
                        set: function (val) { throw ("not implemented");    }
                        });
  
  Object.defineProperty(req.prototype, "httpVersionMajor", {
-                       get: function () { return this.context["owin.RequesProtocol"].split("/")[1].split(".")[0];
+                       get: function () { return this.context["owin.RequestProtocol"].split("/")[1].split(".")[0];
                        },
                        set: function (val) { throw ("not implemented");    }
                        });
  
  Object.defineProperty(req.prototype, "httpVersionMinor", {
-                       get: function () { return this.context["owin.RequesProtocol"].split("/")[1].split(".")[1];
+                       get: function () { return this.context["owin.RequestProtocol"].split("/")[1].split(".")[1];
                        },
                        set: function (val) { throw ("not implemented");    }
                        });
@@ -132,13 +132,15 @@ function OwinHttpServerResponseBridge(owin){ this.context = owin;  };
                        set: function (val) {  this.context["owin.RequestMethod"] = val;    }
                        });
  
+ req.prototype.getHeader = function(key)
+ {
+ return this.context.request.getHeader(key);
+ }
+
+ 
  
  //RESPONSE
   var res= OwinHttpServerResponseBridge;
- 
- Object.defineProperty(res.prototype, "writable", {
-                       get: function () { return true;   }
-                       });
  
  Object.defineProperty(res.prototype, "socket", { get: function () {  return {}  } });
  Object.defineProperty(res.prototype, "connection", { get: function () {  return {}  } });
@@ -163,7 +165,7 @@ function OwinHttpServerResponseBridge(owin){ this.context = owin;  };
  
  res.prototype.writeContinue = function writeContinue(statusCode, headers)
  {
- throw {name : "NotImplementedError", message : "writeContinue HTTP 100 not implemented"};
+ throw {name : "NotImplementedError", message : "writeContinue HTTP 100 not implemented per OWIN/JS spec;  instead server must implement"};
  }
  
  res.prototype.setTimeout = function setTimeout(msecs, callback)
@@ -203,53 +205,14 @@ function OwinHttpServerResponseBridge(owin){ this.context = owin;  };
  var Readable = Stream.Readable;
  var EventEmitter = require('events').EventEmitter;
 
- owinContextHelpers.cloneResponseBodyPrototype(req.prototype,EventEmitter.prototype, "owin.RequestBody");
- owinContextHelpers.cloneResponseBodyPrototype(req.prototype,Stream.prototype, "owin.RequestBody");
- owinContextHelpers.cloneResponseBodyPrototype(req.prototype,Readable.prototype, "owin.RequestBody");
+ owinContextHelpers.cloneBodyPrototypeAlias(req.prototype,EventEmitter.prototype, "owin.RequestBody");
+ owinContextHelpers.cloneBodyPrototypeAlias(req.prototype,Stream.prototype, "owin.RequestBody");
+ owinContextHelpers.cloneBodyPrototypeAlias(req.prototype,Readable.prototype, "owin.RequestBody");
  
- owinContextHelpers.cloneResponseBodyPrototype(res.prototype,EventEmitter.prototype, "owin.ResponseBody");
- owinContextHelpers.cloneResponseBodyPrototype(res.prototype,Stream.prototype, "owin.ResponseBody");
- owinContextHelpers.cloneResponseBodyPrototype(res.prototype,Writable.prototype, "owin.ResponseBody");
+ owinContextHelpers.cloneBodyPrototypeAlias(res.prototype,EventEmitter.prototype, "owin.ResponseBody");
+ owinContextHelpers.cloneBodyPrototypeAlias(res.prototype,Stream.prototype, "owin.ResponseBody");
+ owinContextHelpers.cloneBodyPrototypeAlias(res.prototype,Writable.prototype, "owin.ResponseBody");
  
  }).call(global);
 
-/**
- * Create alias access methods on context.response for context["owin.ResponseBody"] for given stream/writable prototype
- *
- * Note: the alias will be a collection of both functions (which simply shell out to target function) and valuetypes (which
- * have a getter and setter defined which each shell out to the target property)
- *
- * @method private_cloneResponseBodyPrototype
- * @param targetObjectPrototype (__proto__)  the prototype object for the context.response object on which the alias properties are set
- * @param sourceObjectprototype (__proto__)  the prototpye object for the generic stream/writable on which to enumerate all properties
- * @returns (void)
- * @private
- */
-function private_cloneResponseBodyPrototype(targetObjectPrototype, sourceObjectprototype)
-{
-    Object.getOwnPropertyNames(sourceObjectprototype).forEach(function (_property)
-                                                              {
-                                                              if (typeof( sourceObjectprototype[_property]) === 'function')
-                                                              {
-                                                              targetObjectPrototype[_property] = function(){
-                                                              var body =this.context["owin.ResponseBody"];
-                                                              return body[_property].apply(body, Array.prototype.slice.call(arguments));
-                                                              };
-                                                              }
-                                                              else
-                                                              {
-                                                              Object.defineProperty(targetObjectPrototype, _property, {
-                                                                                    
-                                                                                    get: function () {
-                                                                                    return this.context["owin.ResponseBody"][_property];
-                                                                                    },
-                                                                                    
-                                                                                    set: function (val) {
-                                                                                    this.context["owin.ResponseBody"][_property] = val;
-                                                                                    }
-                                                                                    
-                                                                                    });
-                                                              }
-                                                              });
-    
-}
+

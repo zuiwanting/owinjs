@@ -1,10 +1,11 @@
 var path = require('path');
 var url = require('url');
 var util = require('util');
+var constants = require('./owinConstants.js');
 
 var cancellationTokenSource = require('cancellation');
 var owinContextHelpers = require('./owinContextHelpers.js');
-var OwinContextModule = require('./owinContext');
+var OwinContextModule = require('./owinContext.js');
 var initialized = false;
 
 exports = module.exports = function toHttp(appFunc) {
@@ -31,17 +32,15 @@ function OwinContext(req, res) {
     this.req = req;
     this.res = res;
     var context = this;
-    var tokenSource = new cancellationTokenSource();
+    this._callCancelledSource = new cancellationTokenSource();
     
     res.setHeader('X-Powered-By', 'OWIN-JS');
-    context["nodeAppKit.callCancelledSource"] =  tokenSource;
-    context["owin.callCancelled"] = tokenSource.token;
-    context["server.appId"] = "node-http";
+    context["owin.CallCancelled"] = this._callCancelledSource.token;
     context["owin.ResponseStatusCode"] = null;
-    
-    if (!context["owin.ResponseHeaders"]["Content-Length"])
-      context["owin.ResponseHeaders"]["Content-Length"] = "-1";    
- }
+    context[constants.commonkeys.AppId] = "node-http";
+    if (!context[constants.owinjs.getResponseHeader]("Content-Length"))
+       context[constants.owinjs.setResponseHeader]("Content-Length", "-1");
+  }
 
 function init(){
     
@@ -123,12 +122,13 @@ function init(){
                           get: function () { return this.res; }
                           });
     
-    Object.defineProperty(ctx, "server.appId", {
+    Object.defineProperty(ctx, constants.commonkeys.AppId, {
                           get: function () { return this._appId; },
                           set: function (val) { this._appId = val;    }
                           });
     
-    Object.defineProperty(ctx, "nodeAppKit.callCancelledSource", {
+    Object.defineProperty(ctx, constants.commonkeys.CallCancelledSource, {
+                          get: function() { return this._callCancelledSource;},
                           set: function (val) { this._callCancelledSource = val; }
                           });
     
@@ -141,10 +141,11 @@ function init(){
                           set: function (val) { this._callCancelled = val;    }
                           });
     
-    ctx["owinjs.setResponseHeader"] = function(){this.res.setHeader.apply(this.res, Array.prototype.slice.call(arguments));};
-    ctx["owinjs.getResponseHeader"] = function(){this.res.getHeader.apply(this.res, Array.prototype.slice.call(arguments));};
-    ctx["owinjs.removeResponseHeader"] = function(){this.res.removeHeader.apply(this.res, Array.prototype.slice.call(arguments));};
-    ctx["owinjs.writeHead"] = function(){this.res.writeHead.apply(this.res, Array.prototype.slice.call(arguments));};
+    ctx[constants.owinjs.setResponseHeader] = function(){this.res.setHeader.apply(this.res, Array.prototype.slice.call(arguments));};
+    ctx[constants.owinjs.setResponseHeader] = function(){this.res.getHeader.apply(this.res, Array.prototype.slice.call(arguments));};
+    ctx[constants.owinjs.removeResponseHeader] = function(){this.res.removeHeader.apply(this.res, Array.prototype.slice.call(arguments));};
+    ctx[constants.owinjs.writeHead] = function(){this.res.writeHead.apply(this.res, Array.prototype.slice.call(arguments));};
+    ctx[constants.owinjs.getRequestHeader] = function (key) { return this.req.headers[key];  }
     
     console.log("http -> OWIN/JS server initialized");
 }

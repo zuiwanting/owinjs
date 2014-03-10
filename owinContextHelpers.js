@@ -82,14 +82,15 @@ exports.refreshPrototypeOwinContext =function(owinObject)
  * Note: the alias will be a collection of both functions (which simply shell out to target function) and valuetypes (which
  * have a getter and setter defined which each shell out to the target property)
  *
- * @method private_cloneResponseBodyPrototype
+ * @method cloneBodyPrototypeAlias
+ *
  * @param targetObjectPrototype (__proto__)  the prototype object for the context.response object on which the alias properties are set
  * @param sourceObjectprototype (__proto__)  the prototpye object for the generic stream/writable on which to enumerate all properties
  * @param owinContextKey (string) "owin.RequestBody" or "owin.ResponseBody"
  * @returns (void)
- * @private
+ * @internal
  */
-exports.cloneResponseBodyPrototype=function(targetObjectPrototype, sourceObjectprototype, owinContextKey)
+exports.cloneBodyPrototypeAlias=function(targetObjectPrototype, sourceObjectprototype, owinContextKey)
 {
     Object.getOwnPropertyNames(sourceObjectprototype).forEach(function (_property)
                                                               {
@@ -118,6 +119,7 @@ exports.cloneResponseBodyPrototype=function(targetObjectPrototype, sourceObjectp
     
 }
 
+// PRIVATE METHODS
 
 /**
  * Extract name from Owin Property

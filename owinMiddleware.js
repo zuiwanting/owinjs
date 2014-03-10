@@ -1,5 +1,5 @@
 var Promise = require('promise');
-
+var constants = require('./owinConstants.js');
 
 /**
  * Assures that the middleware is represented as OWIN/JS middleware promise format (promise) fn(next)  where next = (promise) function()
@@ -144,8 +144,6 @@ function promiseFromOwinNodeCallBack(fn) {
 function promiseFromConnect2(fn) {
     return function convertedPromiseFromConnect2() {
         var owin = this;
-  //      owin.req=owin.request;
-  //      owin.res=owin.response;
         return new Promise(function (resolve, reject) {
                            try {
                            fn.call(owin, owin.req, owin.res);
@@ -170,8 +168,6 @@ function promiseFromConnect3(fn) {
     return function convertedPromiseFromConnect2(next) {
         var owin = this;
         var nextAdjusted = nextSyncFromOwinNextPromise(next);
-    //    owin.req=owin.request;
-    //    owin.res=owin.response;
         return new Promise(function (resolve, reject) {
                            try {
                            fn.call(owin, owin.req, owin.res, nextAdjusted);
@@ -196,11 +192,9 @@ function promiseFromConnect4(fn) {
     return function convertedPromiseFromConnect2(next) {
         var owin = this;
         var nextAdjusted = nextSyncFromOwinNextPromise(next);
-     //   owin.req=owin.request;
-     //   owin.res=owin.response;
         return new Promise(function (resolve, reject) {
                            try {
-                           fn.call(owin, owin["owinjs.Error"], owin.req, owin.res, nextAdjusted);
+                           fn.call(owin, owin[constants.owinjs.Error], owin.req, owin.res, nextAdjusted);
                            resolve(null);
                            } catch (ex) {
                            reject(ex);
@@ -237,7 +231,7 @@ function nextSyncFromOwinNextPromise(fn) {
     return function NextConvertedFromPromiseSync(err) {
         if (err)
         {
-            this["owinJS.Error"] = err;   // store err for subsequent Connect error handlers
+            this[constants.owinjs.Error] = err;   // store err for subsequent Connect error handlers
             fn.call(this).then();
         }
         else

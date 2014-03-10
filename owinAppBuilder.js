@@ -1,14 +1,3 @@
-/*
- * nodeFunc = (void) function(owin, callback)
- * appFunc = (Promise) function(owin)
- * appletFunc = (Promise) function(owin)   nodeletFunc = (void) function(owin, callback)
- * app.use = function(middleware)   OR function(middlewareAsync)
- * middleware = (void) function(next, callback)  with this = owin, next=nodeletFunc;
- *         OR = (Promise) function(next) with this = owin, next=appletFunc;
- * app.build = (nodeFunc) function()  // builds all middleware into Owin/JS server format
- * app.httpCallback = (function(req, res)) function()  // builds all middleware into http server format
- * */
-
 /**
  * Module dependencies.
  */
@@ -17,10 +6,13 @@ var OwinHttp = require('./owinHttp.js');
 var OwinContext = require('./owinContext');
 var OwinMiddleware = require('./owinMiddleware');
 var util = require('util');
+var constants = require('./owinConstants');
 
 appBuilder = function() {
     this.properties = {};
     this.middleware = [];
+    this.properties[constants.builder.DefaultApp] = owinDefaultApp;
+    this.properties[constants.builder.DefaultMiddleware] = [owinRespondMiddleware];
 }
 
 exports = module.exports = appBuilder;
@@ -33,8 +25,7 @@ app.use = function(mw){
  };
 
 app.build = function(){
-    
-    var mw = [owinRespondMiddleware].concat(this.middleware).concat(owinDefaultApp);
+    var mw = this.properties[constants.builder.DefaultMiddleware].concat(this.middleware).concat(this.properties[constants.builder.DefaultMiddleware]);
     var fn = compose(mw);
     var self = this;
     
@@ -91,8 +82,8 @@ function owinRespondMiddleware(next){
 }
 
 function owinDefaultApp(next){
-    if (this["owinJS.Error"])
-        return Promise.reject(this["owinJS.Error"]);
+    if (this[constants.owinjs.Error])
+        return Promise.reject(this[constants.owinjs.Error]);
     else if (this.response.statusCode === null)
         return Promise.reject(404);
     else
