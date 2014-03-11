@@ -142,7 +142,7 @@ function init(){
                           });
     
     ctx[constants.owinjs.setResponseHeader] = function(){this.res.setHeader.apply(this.res, Array.prototype.slice.call(arguments));};
-    ctx[constants.owinjs.setResponseHeader] = function(){this.res.getHeader.apply(this.res, Array.prototype.slice.call(arguments));};
+    ctx[constants.owinjs.getResponseHeader] = function(){this.res.getHeader.apply(this.res, Array.prototype.slice.call(arguments));};
     ctx[constants.owinjs.removeResponseHeader] = function(){this.res.removeHeader.apply(this.res, Array.prototype.slice.call(arguments));};
     ctx[constants.owinjs.writeHead] = function(){this.res.writeHead.apply(this.res, Array.prototype.slice.call(arguments));};
     ctx[constants.owinjs.getRequestHeader] = function (key) { return this.req.headers[key];  }

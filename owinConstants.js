@@ -110,7 +110,7 @@ exports.owinjs =
 {
     Error : "owinjs.Error",
     setResponseHeader : "owinjs.SetResponseHeader",
-    getResponseHeader : "owinjs.SetResponseHeader",
+    getResponseHeader : "owinjs.GetResponseHeader",
     removeResponseHeader : "owinjs.RemoveResponseHeader",
     writeHead : "owinjs.WriteHead",
     id: "owinjs.Id",
