@@ -16,10 +16,10 @@ exports = module.exports = function toHttp(appFunc) {
     }
     return function(req, res) {
         var owin = new OwinContext(req,res);
-        appFunc(owin, function(err, result) {
-                                          Dispose(owin);
-                                          owin = null;
-                });
+        var err = appFunc(owin);
+        Dispose(owin);
+        owin = null;
+        return err;
     }
 };
 

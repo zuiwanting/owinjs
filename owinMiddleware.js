@@ -1,4 +1,3 @@
-var Promise = require('promise');
 var constants = require('./owinConstants.js');
 
 /**
@@ -21,26 +20,26 @@ exports = module.exports = function owinMiddleware(middleware){
             case 1:
                 return middleware;
                 
-                //fn(req,res) or fn(next, callback)
+                //fn(req,res) or fn(next, callback) NOT SUPPORTED
             case 2:
                 
                 var args =private_getParamNames(middleware);
                 if (arrayEqual(args,["req","res"]))
                 {
-                    return promiseFromConnect2(middleware);
+                    return owinFromConnect2(middleware);
                 }
                 else
                 {
-                    return promiseFromOwinNodeCallBack(middleware);
+                    throw ("not supported");
                 }
 
                 //fn(req,res,next)
             case 3:
-                return promiseFromConnect3(middleware);
+                return owinFromConnect3(middleware);
                 
                 //fn(err, req,res,next)
             case 4:
-                return promiseFromConnect4(middleware);
+                return owinFromConnect4(middleware);
                 
             default:
                 throw("unknown middleware");
@@ -110,29 +109,6 @@ function arrayEqual (array1, array2) {
 
 // ASYNC <--> SYNC CONVERSION PRIVATE METHODS
 
-/**
- * Converts an OWIN/JS NodeFunc to an OWIN/JS AppFunc
- *
- * @method promiseFromOwinNodeCallBack
- *
- * @param (void) fn(next, callback)     with next translated from (promise) function() to (void) function(callback)
- * @returns (promise) fn(next)
- * @private
- */
-function promiseFromOwinNodeCallBack(fn) {
-    return function convertedPromiseFromOwinNodeCallBack(next) {
-        var owin = this;
-        var nextAdjusted = nextCallbackFromOwinNextPromise(next);
-        return new Promise(function (resolve, reject) {
-                           fn.call(owin, nextAdjusted, function(err, result){
-                                   owin = null;
-                                   nextAdjusted = null;
-                                   if (err) reject(err)
-                                   else resolve(result);});
-                           });
-        
-    }
-}
 
 /**
  * Converts an OWIN/JS NodeFunc to an OWIN/JS AppFunc
@@ -140,93 +116,77 @@ function promiseFromOwinNodeCallBack(fn) {
  * @method promiseFromConnect2
  *
  * @param (void) fn(req,res)    with next ignored
- * @returns (promise) fn()
+ * @returns (err) fn()
  * @private
  */
-function promiseFromConnect2(fn) {
+function owinFromConnect2(fn) {
     return function convertedPromiseFromConnect2() {
         var owin = this;
-        return new Promise(function (resolve, reject) {
-                           try {
-                           fn.call(owin, owin.req, owin.res);
-                           owin = null;
-                           resolve(null);
-                           } catch (ex) {
-                           reject(ex);
-                           }
-                           });
-    };
+  
+        try {
+            fn.call(owin, owin.req, owin.res);
+            owin = null;
+            resolve(null);
+            return null;
+        } catch (ex) {
+            return ex;
+        }
+    }
 }
-
+ 
 /**
  * Converts an OWIN/JS NodeFunc to an OWIN/JS AppFunc
  *
- * @method promiseFromConnect3
+ * @method owinFromConnect3
  *
  * @param (void) fn(req,res, next)
- * @returns (promise) fn(next)  with next translated from (promise) function() to (void) function()
+ * @returns (err) fn(next)  with next translated from (err) function() to (void) function(err)
  * @private
  */
-function promiseFromConnect3(fn) {
-    return function convertedPromiseFromConnect2(next) {
+function owinFromConnect3(fn) {
+    return function (next) {
         var owin = this;
-        var nextAdjusted = nextSyncFromOwinNextPromise(next);
-        return new Promise(function (resolve, reject) {
-                           try {
-                           fn.call(owin, owin.req, owin.res, nextAdjusted);
-                           owin = null;
-                           nextAdjusted = null;
-                           resolve(null);
-                           } catch (ex) {
-                           reject(ex);
-                           }
-                           });
-    };
-}
-
-/**
- * Converts an OWIN/JS NodeFunc to an OWIN/JS AppFunc
- *
- * @method promiseFromConnect4
- *
- * @param (void) fn(err, req, res, next)
- * @returns (promise) fn(next) with next translated from (promise) function() to (void) function()
- * @private
- */
-function promiseFromConnect4(fn) {
-    return function convertedPromiseFromConnect2(next) {
-        var owin = this;
-        var nextAdjusted = nextSyncFromOwinNextPromise(next);
-        return new Promise(function (resolve, reject) {
-                           try {
-                           fn.call(owin, owin[constants.owinjs.Error], owin.req, owin.res, nextAdjusted);
-                           owin = null;
-                           nextAdjusted= null;
-                           resolve(null);
-                           } catch (ex) {
-                           reject(ex);
-                           }
-                           });
-    };
-}
-
-/**
- * Converts an OWIN/JS promise-based Next function  to an OWIN/JS callback-based Next function
- *
- * @method nextCallbackFromOwinNextPromise
- *
- * @param (promise) fn()
- * @returns (void) fn(callback)
- * @private
- */
-function nextCallbackFromOwinNextPromise(fn) {
-    return function nextCallbackFromOwinNextPromiseConverted(callback) {
-        fn.call(this).then(function(result){callback(null, result);},function(err){callback(err);});
+        var nextAdjusted = nextSyncFromOwinNext(next);
+        try {
+            fn.call(owin, owin.req, owin.res, nextAdjusted);
+            owin = null;
+            nextAdjusted = null;
+            resolve(null);
+            return null;
+        } catch (ex) {
+            return ex;
+        }
     }
 }
 
 /**
- * Converts an OWIN/JS promise-based Next() function  to an synchronous Connect-style Next() function
+ * Converts an OWIN/JS NodeFunc to an OWIN/JS AppFunc
+ *
+ * @method owinFromConnect4
+ *
+ * @param (void) fn(err, req, res, next)
+ * @returns (err) fn(next) with next translated from (err) function() to (void) function(err)
+ * @private
+ */
+function owinFromConnect4(fn) {
+    return function (next) {
+        var owin = this;
+        var nextAdjusted = nextSyncFromOwinNext(next);
+        
+        try {
+            fn.call(owin, owin[constants.owinjs.Error], owin.req, owin.res, nextAdjusted);
+            owin = null;
+            nextAdjusted= null;
+            resolve(null);
+            return null;
+        } catch (ex) {
+            return ex;
+        }
+    }
+}
+
+/**
+ * Converts an OWIN/JS  Next() function  to an synchronous Connect-style Next() function
  *
  * @method nextSyncFromOwinNextPromise
  *
@@ -234,14 +194,14 @@ function nextCallbackFromOwinNextPromise(fn) {
  * @returns  (void) fn(err)
  * @private
  */
-function nextSyncFromOwinNextPromise(fn) {
-    return function NextConvertedFromPromiseSync(err) {
+function nextSyncFromOwinNext(fn) {
+    return function (err) {
         if (err)
         {
             this[constants.owinjs.Error] = err;   // store err for subsequent Connect error handlers
-            fn.call(this).then();
+            fn.call(this);
         }
         else
-            fn.call(this).then();
+            fn.call(this);
     }
 }
