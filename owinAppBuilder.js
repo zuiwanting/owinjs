@@ -35,17 +35,26 @@ app.build = function(){
         owin.app = self;
         try {
             return fn(owin).then(function(){
-                                 callback(null)},
+                                 OwinContext.shrinkContext(owin);
+                                 callback(null);
+                                 owin = null;
+                          },
                                  function(err){
-                                 errorRespond(owin,err);
-                                 callback(null);});
+                                 owinDefaultError.call(owin, err);
+                                 OwinContext.shrinkContext(owin);
+                                 callback(null);
+                                 owin = null;
+                                 });
         }
         catch (err)
         {
             throw(err);
             owinDefaultError.call(owin,err);
+            OwinContext.shrinkContext(owin);
             callback(null);
+            owin = null;
         }
+        self = null;
     }
 };
 
@@ -75,10 +84,12 @@ function owinRespondMiddleware(next){
     
     return next().then(
                        function (){
+                       owin = null;
                        return Promise.from(null);
                        },
                        function (err){
                        owinDefaultError.call(owin,err);
+                       owin = null;
                        return Promise.from(null);  }
                        );
 }

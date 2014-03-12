@@ -125,6 +125,8 @@ function promiseFromOwinNodeCallBack(fn) {
         var nextAdjusted = nextCallbackFromOwinNextPromise(next);
         return new Promise(function (resolve, reject) {
                            fn.call(owin, nextAdjusted, function(err, result){
+                                   owin = null;
+                                   nextAdjusted = null;
                                    if (err) reject(err)
                                    else resolve(result);});
                            });
@@ -147,6 +149,7 @@ function promiseFromConnect2(fn) {
         return new Promise(function (resolve, reject) {
                            try {
                            fn.call(owin, owin.req, owin.res);
+                           owin = null;
                            resolve(null);
                            } catch (ex) {
                            reject(ex);
@@ -171,6 +174,8 @@ function promiseFromConnect3(fn) {
         return new Promise(function (resolve, reject) {
                            try {
                            fn.call(owin, owin.req, owin.res, nextAdjusted);
+                           owin = null;
+                           nextAdjusted = null;
                            resolve(null);
                            } catch (ex) {
                            reject(ex);
@@ -195,6 +200,8 @@ function promiseFromConnect4(fn) {
         return new Promise(function (resolve, reject) {
                            try {
                            fn.call(owin, owin[constants.owinjs.Error], owin.req, owin.res, nextAdjusted);
+                           owin = null;
+                           nextAdjusted= null;
                            resolve(null);
                            } catch (ex) {
                            reject(ex);

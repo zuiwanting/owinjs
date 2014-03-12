@@ -16,7 +16,10 @@ exports = module.exports = function toHttp(appFunc) {
     }
     return function(req, res) {
         var owin = new OwinContext(req,res);
-        appFunc(owin, function() {});
+        appFunc(owin, function(err, result) {
+                                          Dispose(owin);
+                                          owin = null;
+                });
     }
 };
 
@@ -31,13 +34,15 @@ function OwinContext(req, res) {
     console.log("owin/js http bridge: url path " + req.url);
     this.req = req;
     this.res = res;
+    res.setHeader('X-Powered-By', 'OWIN-JS');
+    
     var context = this;
     this._callCancelledSource = new cancellationTokenSource();
     
-    res.setHeader('X-Powered-By', 'OWIN-JS');
     context["owin.CallCancelled"] = this._callCancelledSource.token;
     context["owin.ResponseStatusCode"] = null;
     context[constants.commonkeys.AppId] = "node-http";
+    
     if (!context[constants.owinjs.getResponseHeader]("Content-Length"))
        context[constants.owinjs.setResponseHeader]("Content-Length", "-1");
   }
@@ -149,3 +154,14 @@ function init(){
     
     console.log("http -> OWIN/JS server initialized");
 }
+
+/**
+ * Clean up owin context *
+ * @class Dispose
+ * @private
+ */
+
+function Dispose(owin) {
+    owin.req = null;
+    owin.res = null;
+    }

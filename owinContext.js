@@ -300,3 +300,23 @@ function private_deleteIgnoreCase(obj, key)
     }
     return false;
 }
+
+exports.shrinkContext = function(context) {
+    console.log(context.request);
+    delete context.request.context;
+    delete context.response.context;
+    delete context.owin.context ;
+    delete context.server.context ;
+    delete context.nodeAppKit.context ;
+    delete context.req.context;
+    delete context.res.context;
+    
+    delete context.request;
+    delete context.response;
+    delete context.owin ;
+    delete context.server ;
+    delete context.nodeAppKit ;
+    delete context.req;
+    delete context.res;
+    }
+

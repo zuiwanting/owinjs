@@ -77,12 +77,12 @@ function OwinHttpServerResponseBridge(owin){ this.context = owin;  };
  
  Object.defineProperty(req.prototype, "url", {
                        get: function () {
-                       var owin = this.context;
                        var uri =
-                       owin["owin.RequestPath"];
+                       this.context["owin.RequestPath"];
                        
-                       if (owin["owin.RequestQueryString"] != "")
-                       uri += "?" + owin["owin.RequestQueryString"];
+                       if (this.context["owin.RequestQueryString"] != "")
+                       uri += "?" + this.context["owin.RequestQueryString"];
+                       return uri;
                        
                        }, set: function (val) {
                        if (!this._originalurl)
