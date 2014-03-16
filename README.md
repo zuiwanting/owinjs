@@ -84,7 +84,7 @@ npm install owinjs
 ### Hello World with Middleware Pipeline:
 ``` js
 var owin = require('owinjs');
-var browser = require('browser'); 
+var browser = require('owinjs-browser'); 
 var app = new owin.app();
 app.use(function(next){
     this.response.writeHead(200, {'Content-Type': 'text/html'});
@@ -97,7 +97,7 @@ browser.createOwinServer(app.build()).listen();
 ### Hello World with callbacks instead of Async Promises
 ``` js
 var owin = require('owinjs');
-var browser = require('browser'); 
+var browser = require('owinjs-browser'); 
 var app = new owin.app();
 app.use(function(next, callback){
     this.response.writeHead(200, {'Content-Type': 'text/html'});
@@ -110,7 +110,7 @@ browser.createOwinServer(app.build()).listen();
 ### OwinConnect Bridge:    
 ``` js
 var owin = require('owinjs');
-var browser = require('browser');  
+var browser = require('owinjs-browser');  
 var app = function(req, res) {
     response.writeHead(200, {"Content-Type": "text/html"});
     response.end("<html><head></head><body>Hello World</body>");
