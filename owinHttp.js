@@ -3,7 +3,7 @@ var url = require('url');
 var util = require('util');
 var constants = require('./owinConstants.js');
 
-var cancellationTokenSource = require('cancellation');
+var cancellationTokenSource = require('./cancellation.js');
 var owinContextHelpers = require('./owinContextHelpers.js');
 var OwinContextModule = require('./owinContext.js');
 var initialized = false;

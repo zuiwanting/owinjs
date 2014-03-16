@@ -302,7 +302,6 @@ function private_deleteIgnoreCase(obj, key)
 }
 
 exports.shrinkContext = function(context) {
-    console.log(context.request);
     delete context.request.context;
     delete context.response.context;
     delete context.owin.context ;

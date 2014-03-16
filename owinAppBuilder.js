@@ -27,12 +27,10 @@ app.use = function(mw){
 app.build = function(){
     var mw = this.properties[constants.builder.DefaultMiddleware].concat(this.middleware).concat(this.properties[constants.builder.DefaultApp]);
     var fn = compose(mw);
-    var self = this;
     
     return function owinPipelineBuilder(owin, callback){
         OwinContext.expandContext(owin);
                 
-        owin.app = self;
         try {
             return fn(owin).then(function(){
                                  OwinContext.shrinkContext(owin);
