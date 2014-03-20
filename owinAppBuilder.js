@@ -3,19 +3,19 @@
  */
 var Promise = require('promise');
 var OwinHttp = require('./owinHttp.js');
-var OwinContext = require('./owinContext');
-var OwinMiddleware = require('./owinMiddleware');
-var util = require('util');
-var constants = require('./owinConstants');
+var OwinContext = require('./owinContext.js');
+var OwinMiddleware = require('./owinMiddleware.js');
+var OwinMount = require('./owinMount.js');
+var constants = require('./owinConstants.js');
 
-appBuilder = function() {
+function appBuilder() {
     this.properties = {};
     this.middleware = [];
     this.properties[constants.builder.DefaultApp] = owinDefaultApp;
     this.properties[constants.builder.DefaultMiddleware] = [owinRespondMiddleware];
 }
 
-exports = module.exports = appBuilder;
+exports = module.exports = new appBuilder();
 
 var app = appBuilder.prototype;
 
@@ -23,6 +23,28 @@ app.use = function(mw){
      this.middleware.push(OwinMiddleware(mw));
      return this;
  };
+
+app.map = function (location, callback) {
+
+    var appBuilderChild = new appBuilder();
+    callback(appBuilderChild);
+    var nodeFunc = appBuilderChild.build();
+    this.middleware.push(OwinMount(location, appBuilderChild.build()
+    mapper.map(location, stack);
+
+
+
+  this.middleware.push(function (next) {
+
+    var appBuilderChild = new appBuilder();
+
+    callback(appBuilderChild);
+
+    mapper.map(location, stack);
+
+    return mapper;
+  });
+};
 
 app.build = function(){
     var mw = this.properties[constants.builder.DefaultMiddleware].concat(this.middleware).concat(this.properties[constants.builder.DefaultApp]);
