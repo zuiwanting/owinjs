@@ -72,7 +72,7 @@ These are low overhead functions, bridging by reference not by value wherever po
 
 * `owin.connect()` consumes a Connect-based application function (one that would normally be passed to the http.CreateServer method) and returns an Owin/JS **AppFunc**.
 * `owin.http()` consumes an Owin/JS **AppFunc** and returns a function (that takes http.requestMessage and http.requestMessage as arguments) and one that can be passed directly to the http.createServer method    
-* `app.httpCallback()` consumes an Owin/JS **AppFunc** and returns a function (that takes http.requestMessage and http.requestMessage as arguments) and one that can be passed directly to the http.createServer method   
+* `app.buildHttp()` is syntactic sugar to build the pipleine and returns a node.js-ready function (that takes http.requestMessage and http.requestMessage as arguments) and one that can be passed directly to the http.createServer method   
 
 ## Example Usage
 
@@ -129,17 +129,20 @@ app.use(function(next){
     this.response.end("<html><head></head><body>Hello World</body>");
 return next();
 });
-http.createServer(owin.http(app.build())).listen();
+http.createServer(owin.buildHttp()).listen();
 ```  
 
 ## Definitions
 
- * **appFunc** = `(Promise) function(owin)`
-   * **appletFunc** = `(Promise) function()` with `this` = **owin**
-  * **app.use** = `(app)function(middleware)`
- * **middleware** = `(void) function(next, callback)`  with `this` = **owin**, `next`=**nodeletFunc** OR `(Promise) function(next)` with `this` = **owin**, `next`=**appletFunc**;
+ * **appFunc** = `(Promise) function()` with `this` = **owin**
+ * **app.use** = `(app)function(middleware)`
+ * **middleware** = `(Promise) function(next)` with `this` = **owin**, `next`=**appFunc**
+ * OR **middleware** = `(void) function(next, callback)`  with `this` = **owin**, `next`=(void) function(callback)  for compatibility with traditional node Callback-style  OWIN/JS middelware
+ * OR **middleware** = `fn(req, res, next)` for compatibility with Connect/ExpressJS middleware
+ * OR **middleware** = `fn(err, req, res, next)` for compatibility with Connect/ExpressJS middleware
  * **app.build** = `(appFunc) function()`   // builds middleware 
- * **owin** = owin context (with .Request, .Response object components)
+ * **app.buildHttp** = `(function(req, res)) function()`   // builds middleware for compatibility with Connect/ExpressJS hosts
+ * **owin** = owin context (with `.request`, `.response` object components)
 
 
 ## API Reference Specification
