@@ -1,7 +1,6 @@
-exports.app = require('./owinAppBuilder.js');
-exports.connect = require('./owinConnect.js');
-exports.toHttp = require('./owinHttp.js');
-exports.context = require('./owinContext.js');
-exports.middleware = require('./owinMiddleware.js');
-exports.constants = require('./owinConstants.js');
-
+exports.app = require('./lib/owinAppBuilder.js');
+exports.connect = require('./lib/owinConnect.js');
+exports.toHttp = require('./lib/owinHttp.js');
+exports.context = require('./lib/owinContext.js');
+exports.middleware = require('./lib/owinMiddleware.js');
+exports.constants = require('./lib/owinConstants.js');
