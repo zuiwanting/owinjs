@@ -19,9 +19,9 @@ An Owin/JS middleware/application is simply a `function(next)` that provides a s
 
 Middleware can be chained with `app.use(middleware1).use(middleware2)` etc.
 
-Owin/JS middleware can be used in Owin/JS servers like [nodeAppKit](https://github.com/OwinJS/NodeAppKit) with `app.build()` or can be used directly in legacy Node http servers with `app.httpCallback()`.  
+Owin/JS middleware can be used in Owin/JS servers like [nodeAppKit](https://github.com/OwinJS/NodeAppKit) with `app.build()` or can be used directly in legacy Node http servers with `app.buildHttp()`.  
 
-Similarly, Owin/JS servers can call legacy middleware with `owin.connect( function(req,res){ ... }  )`.
+Similarly, Owin/JS servers can call legacy middleware with `app.use( function(req,res){ ... }  )`.  
 
 
 ## NPM Package Contents
@@ -55,6 +55,9 @@ The middleware parameter determines which behavior is being chained into the pip
 
 * If the middleware given to use is a function that takes **two** arguments, then it will be invoked with the `next` component in the chain as its parameter, with a Node-based callback (`function(err, result){}`)as its second parameter, and with the `this` context set to the Owin/JS context.  This type of middleware should return void.
 
+* Legacy middleware can also be invoked with  `app.use( function(req,res){ ... }  )`, `app.use( function(req, res, next){ ... }  )` or `app.use( function(err, req, res, next){ ... }  )`.  The AppBuilder is smart enough to detect the two argument function with parameters named req and res in this case (use of different naming conventions need to be wrapped in a `function(req,res){}`), and assumes three and four argument functions are legacy.
+
+
 ### returns app
 The AppBuilder `app` itself is returned. This enables you to chain your use statements together.
 
@@ -66,12 +69,14 @@ returns an Owin/JS AppFunc `(promise) function(owin)` that can be inserted into 
 
 ## Bridges
 
-Two simple functions `owin.connect()` and `owin.http()` are provided to bridge between Owin context applications/middleware and Node.js http-style `function(req,res)` based  applications/middleware. 
+Two simple functions `owin.connect()` and `owin.http()` are provided to bridge between Owin context applications/middleware and Node.js http-style `function(req,res)` based  applications/middleware.   Often these are not used directly as the AppBuilder functionality automatically wraps legacy middleware and can reutnr a node.js-ready pipeline with `.buildHttp()`
 
-These are low overhead functions, bridging by reference not by value wherever possible, and open up the Owin/JS world to the entire Connect/Express based ecosystem and vice versa.   We have not ported to Koa or other similar frameworks but it would be relatively straightforward to do so.
+Note: The bridges are low overhead functions, binding by reference not by value wherever possible, so middleware can be interwoven throughout the pipeline, and open up the Owin/JS world to the entire Connect/Express based ecosystem and vice versa.   
+
+We have not ported to Koa, Mach, Kraken or other similar frameworks but it would be relatively straightforward to do so.
 
 * `owin.connect()` consumes a Connect-based application function (one that would normally be passed to the http.CreateServer method) and returns an Owin/JS **AppFunc**.
-* `owin.http()` consumes an Owin/JS **AppFunc** and returns a function (that takes http.requestMessage and http.requestMessage as arguments) and one that can be passed directly to the http.createServer method    
+* `owin.toHttp()` consumes an Owin/JS **AppFunc** and returns a function (that takes http.requestMessage and http.requestMessage as arguments) and one that can be passed directly to the http.createServer method    
 * `app.buildHttp()` is syntactic sugar to build the pipleine and returns a node.js-ready function (that takes http.requestMessage and http.requestMessage as arguments) and one that can be passed directly to the http.createServer method   
 
 ## Example Usage
