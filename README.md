@@ -62,7 +62,7 @@ The AppBuilder `app` itself is returned. This enables you to chain your use stat
 ```js
 app.build()
 ```
-returns an Owin/JS NodeFunc function(owin, callback) that can be inserted into any Owin/JS server.
+returns an Owin/JS AppFunc `(promise) function(owin)` that can be inserted into any Owin/JS server.
 
 ## Bridges
 
@@ -70,9 +70,9 @@ Two simple functions `owin.connect()` and `owin.http()` are provided to bridge b
 
 These are low overhead functions, bridging by reference not by value wherever possible, and open up the Owin/JS world to the entire Connect/Express based ecosystem and vice versa.   We have not ported to Koa or other similar frameworks but it would be relatively straightforward to do so.
 
-* `owin.connect()` consumes a Connect-based application function (one that would normally be passed to the http.CreateServer method) and returns an Owin/JS **NodeFunc**.
-* `owin.http()` consumes an Owin/JS **NodeFunc** and returns a function (that takes http.requestMessage and http.requestMessage as arguments) and one that can be passed directly to the http.createServer method    
-* `app.httpCallback()` consumes an Owin/JS **NodeFunc** and returns a function (that takes http.requestMessage and http.requestMessage as arguments) and one that can be passed directly to the http.createServer method   
+* `owin.connect()` consumes a Connect-based application function (one that would normally be passed to the http.CreateServer method) and returns an Owin/JS **AppFunc**.
+* `owin.http()` consumes an Owin/JS **AppFunc** and returns a function (that takes http.requestMessage and http.requestMessage as arguments) and one that can be passed directly to the http.createServer method    
+* `app.httpCallback()` consumes an Owin/JS **AppFunc** and returns a function (that takes http.requestMessage and http.requestMessage as arguments) and one that can be passed directly to the http.createServer method   
 
 ## Example Usage
 
@@ -91,7 +91,7 @@ app.use(function(next){
     this.response.end("<html><head></head><body>Hello World</body>");
     return next();
     });
-browser.createOwinServer(app.build()).listen();
+owinjs.createServer(app.build()).listen();
 ```
    
 ### Hello World with callbacks instead of Async Promises
@@ -104,7 +104,7 @@ app.use(function(next, callback){
     this.response.end("<html><head></head><body>Hello World</body>");
     next(this, function(err, result){callback(err,result)});
     });
-browser.createOwinServer(app.build()).listen();
+owinjs.createServer(app.build()).listen();
 ```
 
 ### OwinConnect Bridge:    
@@ -115,7 +115,7 @@ var app = function(req, res) {
     response.writeHead(200, {"Content-Type": "text/html"});
     response.end("<html><head></head><body>Hello World</body>");
 });
-browser.createOwinServer(owin.connect(app)).listen(); 
+owinjs.createServer(owin.connect(app)).listen(); 
 ```    
 
 ### OwinHttp Bridge:
@@ -134,13 +134,11 @@ http.createServer(owin.http(app.build())).listen();
 
 ## Definitions
 
- * **nodeFunc** = `(void) function(owin, callback)`
-   * **nodeletFunc** = `(void) function(callback)` with `this` = **owin**
  * **appFunc** = `(Promise) function(owin)`
    * **appletFunc** = `(Promise) function()` with `this` = **owin**
   * **app.use** = `(app)function(middleware)`
  * **middleware** = `(void) function(next, callback)`  with `this` = **owin**, `next`=**nodeletFunc** OR `(Promise) function(next)` with `this` = **owin**, `next`=**appletFunc**;
- * **app.build** = `(nodeFunc) function()`   // builds middleware 
+ * **app.build** = `(appFunc) function()`   // builds middleware 
  * **owin** = owin context (with .Request, .Response object components)
 
 
