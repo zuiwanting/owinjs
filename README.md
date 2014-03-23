@@ -81,12 +81,12 @@ We have not ported to Koa, Mach, Kraken or other similar frameworks but it would
 
 ## Example Usage
 
-### Installation:
+### Installation
 ``` js
 npm install owinjs
 ```
     
-### Hello World with Middleware Pipeline:
+### Hello World Example
 ``` js
 var owin = require('owinjs');
 var app = new owin.app();
