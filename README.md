@@ -2,6 +2,8 @@
 
 # OwinJS/owinjs
 
+[![NPM version](https://badge.fury.io/js/owinjs.png)](http://badge.fury.io/js/owinjs)
+
 ## About
 
  [`OwinJS/owinjs-spec`](https://github.com/OwinJS/owinjs-spec) defines a standard interface between Node.js (and .NET) http servers and web applications. 
